@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ☀️ Light Mode Palette */
+  --color-bg-primary: #FFFFFF;
+  --color-bg-secondary: #F4F7FE;
+  --color-brand-primary: #0A3C51;
+  --color-brand-secondary: #007299;
+  --color-accent: #7B4FBF;
+  --color-text-primary: #10141A;
+
+  /* Fonts (Next.js defaults) */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 🌙 Dark Mode Palette (Default) */
+    --color-bg-primary: #10141A;
+    --color-bg-secondary: #1C212C;
+    --color-brand-primary: #0A3C51;
+    --color-brand-secondary: #007299;
+    --color-accent: #7B4FBF;
+    --color-text-primary: #F4F7FE;
+  }
+}
+
+/* Base styles enforcing the theme */
+@layer base {
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}

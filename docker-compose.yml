@@ -11,7 +11,7 @@ services:
       - "${AUTH_DB_PORT}:5432"
     volumes:
       - auth_postgres_data:/var/lib/postgresql
-    healthcheck: 
+    healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}" ]
       interval: 10s
       timeout: 5s
@@ -40,11 +40,30 @@ services:
     volumes:
       - api_postgres_data:/var/lib/postgresql
       - ./api-service/src/main/resources/db/migration:/docker-entrypoint-initdb.d/:ro
-    healthcheck: 
+    healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${API_DB_USER} -d ${API_DB_NAME}" ]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  frontend-db:
+    image: postgres:18
+    container_name: frontend-database
+    restart: always
+    environment:
+      POSTGRES_USER: ${FRONTEND_DB_USER}
+      POSTGRES_PASSWORD: ${FRONTEND_DB_PASSWORD}
+      POSTGRES_DB: ${FRONTEND_DB_NAME}
+    ports:
+      - "${FRONTEND_DB_PORT}:5432"
+    volumes:
+      - frontend_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${FRONTEND_DB_USER} -d ${FRONTEND_DB_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   meilisearch:
     image: getmeili/meilisearch:latest
@@ -91,7 +110,6 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/auth/actuator/health" ]
       interval: 10s
       retries: 5
-
     environment:
       AUTH_DB_URL: jdbc:postgresql://auth-db:5432/${AUTH_DB_NAME}
       AUTH_DB_USER: ${AUTH_DB_USER}
@@ -101,7 +119,6 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       EUREKA_SERVER: http://service-registry:8761/eureka
-
       AUTH_SERVER_PRIVATE_KEY: ${AUTH_SERVER_PRIVATE_KEY}
       AUTH_SERVER_PUBLIC_KEY: ${AUTH_SERVER_PUBLIC_KEY}
       AUTH_SERVER_KEY_ID: ${AUTH_SERVER_KEY_ID}
@@ -116,7 +133,6 @@ services:
         condition: service_healthy
       redis-session:
         condition: service_started
-
     environment:
       AUTH_REDIS_HOST: redis-session
       AUTH_REDIS_PORT: 6379
@@ -135,26 +151,6 @@ services:
     depends_on:
       api-db:
         condition: service_healthy
-#      api-gateway:
-#        condition: service_healthy
-
-app-backwel:
-    build:
-      context: ./app-backwel
-      dockerfile: Dockerfile
-    container_name: app-backwel
-    ports:
-      - "3000:3000"
-    depends_on:
-      api-gateway:
-        condition: service_started
-      api-db:
-        condition: service_healthy 
-    environment:
-      DATABASE_URL: postgresql://${API_DB_USER}:${API_DB_PASSWORD}@api-db:5432/${API_DB_NAME}
-      GATEWAY_URL: http://api-gateway:8080
-      NODE_ENV: production
-
     environment:
       API_REDIS_HOST: api-cache
       API_REDIS_PORT: 6379
@@ -167,10 +163,35 @@ app-backwel:
       MEILISEARCH_HOST: http://meilisearch:7700
       MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY}
 
+  app-backwel:
+    build:
+      context: ./app-backwel
+      dockerfile: Dockerfile
+    container_name: app-backwel
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      frontend-db:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
+      redis-session:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://${FRONTEND_DB_USER}:${FRONTEND_DB_PASSWORD}@frontend-db:5432/${FRONTEND_DB_NAME}
+      GATEWAY_URL: http://api-gateway:8080
+      REDIS_HOST: redis-session
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      NODE_ENV: production
+    volumes:
+      - ./app-backwel/public/uploads:/app/public/uploads
 
 volumes:
   meili_data:
   auth_postgres_data:
   api_postgres_data:
+  frontend_postgres_data:
   bff_redis_data:
   api_redis_data:
