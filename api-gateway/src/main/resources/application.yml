@@ -1,0 +1,134 @@
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: false
+        same-site: lax
+  port: 8080
+
+
+spring:
+  application:
+    name: api-gateway
+
+  session:
+    timeout: 30d
+    redis:
+      namespace: gateway:session
+      flush-mode: immediate
+
+  data:
+    redis:
+      host: ${AUTH_REDIS_HOST:localhost}
+      port: ${AUTH_REDIS_PORT:6379}
+      password: ${AUTH_REDIS_PASSWORD}
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - TokenRelay=
+            - PreserveHostHeader
+            - name: Retry
+              args:
+                retries: 3
+                statuses: INTERNAL_SERVER_ERROR,SERVICE_UNAVAILABLE
+                methods: GET,POST
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+                  factor: 2
+
+          routes:
+            - id: auth-server
+              uri: lb://AUTH-SERVER
+              predicates:
+                - Path=/auth/**
+              filters:
+                - AddRequestHeader=X-Forwarded-Prefix, /auth
+                - PreserveHostHeader
+                - name: CircuitBreaker
+                  args:
+                    name: identityService
+                    fallbackUri: forward:/fallback/auth
+
+            - id: api-service
+              uri: lb://API-SERVICE
+              predicates:
+                - Path=/api/v1/**
+              filters:
+                - StripPrefix=2
+
+            - id: fallback
+              uri: forward:/fallback
+              predicates:
+                - Path=/fallback/**
+          filter:
+            circuit-breaker:
+              enabled: true
+  security:
+    oauth2:
+      client:
+        registration:
+          gateway-client:
+            provider: auth-server
+            client-id: ${CLIENT_ID:gateway-client}
+            client-secret: ${CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - offline_access
+
+        provider:
+          auth-server:
+            issuer-uri: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}
+            authorization-uri: ${AUTH_SERVER_EXTERNAL:http://localhost:9000/auth}/oauth2/authorize
+            token-uri: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}/oauth2/token
+            jwk-set-uri: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}/oauth2/jwks
+            user-name-attribute: sub
+
+oauth2:
+  client:
+    pkce-enabled: true
+    require-proof-key: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      access: unrestricted
+
+logging:
+  level:
+    com.disthropic: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: INFO
+    org.springframework.session: DEBUG
+
+fallback:
+  messages:
+    user-service: "El servicio de usuarios no está disponible temporalmente. Por favor, intente más tarde."
+    order-service: "El servicio de órdenes no está disponible temporalmente. Por favor, intente más tarde."
+    default: "Servicio no disponible. Por favor, intente más tarde."
+
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}

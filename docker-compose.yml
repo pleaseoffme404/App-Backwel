@@ -1,0 +1,176 @@
+services:
+  auth-db:
+    image: postgres:18
+    container_name: auth-database
+    restart: always
+    environment:
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_DB_NAME}
+    ports:
+      - "${AUTH_DB_PORT}:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql
+    healthcheck: 
+      test: [ "CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis-session:
+    image: redis:7.2-alpine
+    container_name: bff-redis
+    ports:
+      - "${AUTH_REDIS_PORT}:6379"
+    command: redis-server --requirepass ${AUTH_REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - bff_redis_data:/data
+
+  api-db:
+    image: postgres:18
+    container_name: api-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${API_DB_USER}
+      POSTGRES_PASSWORD: ${API_DB_PASSWORD}
+      POSTGRES_DB: ${API_DB_NAME}
+    ports:
+      - "${API_DB_PORT}:5432"
+    volumes:
+      - api_postgres_data:/var/lib/postgresql
+      - ./api-service/src/main/resources/db/migration:/docker-entrypoint-initdb.d/:ro
+    healthcheck: 
+      test: [ "CMD-SHELL", "pg_isready -U ${API_DB_USER} -d ${API_DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: meilisearch
+    ports:
+      - "${MEILI_PORT}:7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_ENV=development
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - meili_data:/meili_data
+    restart: always
+
+  api-cache:
+    image: redis:7.2-alpine
+    container_name: api-cache
+    command: redis-server --requirepass ${API_REDIS_PASSWORD} --databases 16
+    ports:
+      - "${API_REDIS_PORT}:6379"
+    volumes:
+      - api_redis_data:/data
+
+  service-registry:
+    build: ./service-registry
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth-server:
+    build: ./auth-server
+    ports:
+      - "9000:9000"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/auth/actuator/health" ]
+      interval: 10s
+      retries: 5
+
+    environment:
+      AUTH_DB_URL: jdbc:postgresql://auth-db:5432/${AUTH_DB_NAME}
+      AUTH_DB_USER: ${AUTH_DB_USER}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      SERVICE_SECRET: ${SERVICE_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      EUREKA_SERVER: http://service-registry:8761/eureka
+
+      AUTH_SERVER_PRIVATE_KEY: ${AUTH_SERVER_PRIVATE_KEY}
+      AUTH_SERVER_PUBLIC_KEY: ${AUTH_SERVER_PUBLIC_KEY}
+      AUTH_SERVER_KEY_ID: ${AUTH_SERVER_KEY_ID}
+      ISSUER_URI: ${ISSUER_URI}
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      auth-server:
+        condition: service_healthy
+      redis-session:
+        condition: service_started
+
+    environment:
+      AUTH_REDIS_HOST: redis-session
+      AUTH_REDIS_PORT: 6379
+      AUTH_REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      CLIENT_ID: gateway-client
+      CLIENT_SECRET: ${GATEWAY_SECRET}
+      ISSUER_URI: ${ISSUER_URI}
+      AUTH_SERVER_EXTERNAL: http://localhost:9000/auth
+      AUTH_SERVER_INTERNAL: http://auth-server:9000/auth
+      EUREKA_URL: http://service-registry:8761/eureka/
+
+  api-service:
+    build: ./api-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      api-db:
+        condition: service_healthy
+#      api-gateway:
+#        condition: service_healthy
+
+app-backwel:
+    build:
+      context: ./app-backwel
+      dockerfile: Dockerfile
+    container_name: app-backwel
+    ports:
+      - "3000:3000"
+    depends_on:
+      api-gateway:
+        condition: service_started
+      api-db:
+        condition: service_healthy 
+    environment:
+      DATABASE_URL: postgresql://${API_DB_USER}:${API_DB_PASSWORD}@api-db:5432/${API_DB_NAME}
+      GATEWAY_URL: http://api-gateway:8080
+      NODE_ENV: production
+
+    environment:
+      API_REDIS_HOST: api-cache
+      API_REDIS_PORT: 6379
+      API_REDIS_PASSWORD: ${API_REDIS_PASSWORD}
+      API_DB_URL: jdbc:postgresql://api-db:5432/${API_DB_NAME}
+      API_DB_USER: ${API_DB_USER}
+      API_DB_PASSWORD: ${API_DB_PASSWORD}
+      AUTH_SERVER_INTERNAL: http://auth-server:9000/auth
+      EUREKA_SERVER: http://service-registry:8761/eureka/
+      MEILISEARCH_HOST: http://meilisearch:7700
+      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY}
+
+
+volumes:
+  meili_data:
+  auth_postgres_data:
+  api_postgres_data:
+  bff_redis_data:
+  api_redis_data:
