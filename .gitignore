@@ -16,7 +16,7 @@ buildNumber.properties
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 .env
-
+node_modules/
 auth-server/src/main/resources/*.der
 auth-server/src/main/resources/*.txt
 auth-server/src/main/resources/*.pem
