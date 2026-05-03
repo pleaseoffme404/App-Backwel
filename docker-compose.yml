@@ -163,6 +163,29 @@ services:
       MEILISEARCH_HOST: http://meilisearch:7700
       MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY}
 
+  email-service:
+    build:
+      context: ./email-service
+      dockerfile: Dockerfile
+    container_name: email-service
+    restart: always
+    environment:
+      SERVICE_EMAIL_SECRET: ${SERVICE_EMAIL_SECRET}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      QUEUE_HOST: ${QUEUE_HOST}
+      QUEUE_PORT: ${QUEUE_PORT}
+      QUEUE_NAME: ${QUEUE_NAME}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   app-backwel:
     build:
       context: ./app-backwel
@@ -178,6 +201,8 @@ services:
         condition: service_started
       redis-session:
         condition: service_started
+      email-service:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${FRONTEND_DB_USER}:${FRONTEND_DB_PASSWORD}@frontend-db:5432/${FRONTEND_DB_NAME}
       GATEWAY_URL: http://api-gateway:8080
