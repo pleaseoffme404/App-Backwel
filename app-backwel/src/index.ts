@@ -14,6 +14,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/client/index.html'));
 });
 
+
 app.listen(port, () => {
   console.log(`BFF Server running on port ${port}`);
-});
+});   
