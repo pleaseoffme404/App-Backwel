@@ -1,35 +1,21 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 export default {
   content: [
-    "./src/client/index.html",
+    "./index.html",
     "./src/client/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        bg: {
-          primary: 'var(--color-bg-primary)',
-          secondary: 'var(--color-bg-secondary)',
-        },
-        brand: {
-          primary: 'var(--color-brand-primary)',
-          secondary: 'var(--color-brand-secondary)',
-        },
-        accent: 'var(--color-accent)',
-        text: {
-          primary: 'var(--color-text-primary)',
-        }
-      },
-      keyframes: {
-        shimmer: {
-          '100%': { transform: 'translateX(100%)' }
-        }
-      },
-      animation: {
-        shimmer: 'shimmer 1.5s infinite'
+        'bg-primary': 'var(--bg-primary)',
+        'bg-secondary': 'var(--bg-secondary)',
+        'brand-primary': 'var(--brand-primary)',
+        'brand-secondary': 'var(--brand-secondary)',
+        'accent': 'var(--accent)',
+        'text-primary': 'var(--text-primary)',
       }
     },
   },
   plugins: [],
-} satisfies Config
+} satisfies Config;
