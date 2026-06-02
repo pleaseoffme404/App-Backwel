@@ -139,7 +139,7 @@ public class ApiGatewayConfig {
     @Bean
     public ServerAuthenticationSuccessHandler authenticationSuccessHandler() {
         RedirectServerAuthenticationSuccessHandler handler = new RedirectServerAuthenticationSuccessHandler();
-        handler.setLocation(URI.create("/"));
+        handler.setLocation(URI.create("http://localhost:3000/auth/callback"));
         return handler;
     }
 

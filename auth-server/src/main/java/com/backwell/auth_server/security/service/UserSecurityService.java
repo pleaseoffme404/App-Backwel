@@ -54,6 +54,8 @@ public class UserSecurityService extends OidcUserService implements UserDetailsS
             throw new UsernameNotFoundException(username);
         }
 
+
+        log.info("User fetched with roles: {}", user.getRoles());
         if (user.getAuthProvider() != AuthProvider.LOCAL) {
             String msg = String.format(
                     "This user has already been registered using `%s` auth provider",

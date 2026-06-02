@@ -191,15 +191,8 @@ public class AuthorizationServerConfig {
                 .issuer(jwtProperties.getIssuer())
                 .build();
     }
-    @Bean
-    public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
-        return context -> {
-            if (OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) {
-                context.getClaims().claims(claims -> claimsEnhancer.customizeClaims(claims, context));
-            }
-        };
-    }
 
+    
     @Bean
     public OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
         JdbcOAuth2AuthorizationService service = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);

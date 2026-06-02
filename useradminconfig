@@ -1,0 +1,23 @@
+
+```cmd
+curl -X POST http://localhost:9000/auth/register -H "Content-Type: application/json" -d "{\"email\": \"admin@backwel.com\", \"password\": \"AdminPassword123!\"}"
+```
+
+Y luego asigna el rol igual que antes:
+
+```cmd
+docker exec -it auth-database psql -U admin -d auth-database
+```
+
+```sql
+SELECT id FROM users WHERE email = 'admin@backwel.com';
+```
+
+```sql
+INSERT INTO user_role (user_id, role_id) 
+SELECT '<UUID>', id FROM role WHERE role_name = 'ADMIN';
+```
+
+```sql
+\q
+```

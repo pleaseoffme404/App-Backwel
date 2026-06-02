@@ -15,9 +15,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -29,49 +31,65 @@ public class UserContextGlobalFilter implements GlobalFilter, Ordered {
                 .map(SecurityContext::getAuthentication)
                 .filter(authentication -> authentication != null && authentication.isAuthenticated())
                 .flatMap(authentication -> {
-                    ServerHttpRequest mutatedRequest = addUserHeaders(exchange.getRequest(), authentication);
+                    ServerHttpRequest.Builder builder = exchange.getRequest().mutate();
 
-                    log.debug("User context added for: {}", authentication.getName());
+                    builder.header("X-Authenticated-User", authentication.getName());
+
+                    if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
+                        Object principal = oauthToken.getPrincipal();
+
+                        if (principal instanceof OidcUser oidcUser) {
+                            builder.header("X-User-Email", Optional.ofNullable(oidcUser.getEmail()).orElse(""));
+                            builder.header("X-User-Name", Optional.ofNullable(oidcUser.getFullName()).orElse(""));
+                        } else if (principal instanceof OAuth2User oauth2User) {
+
+                            String name = Optional.ofNullable(oauth2User.getAttribute("name")).map(Object::toString).orElse("");
+                            String email = Optional.ofNullable(oauth2User.getAttribute("email")).map(Object::toString).orElse("");
+                            builder.header("X-User-Name", name);
+                            builder.header("X-User-Email", email);
+                        }
+
+                        Map<String, Object> attributes = oauthToken.getPrincipal().getAttributes();
+                        attributes.forEach((key, value) -> {
+                            if (value != null && !key.equals("sub") && !key.equals("email") && !key.equals("name")) {
+                                if (value instanceof List<?> list) {
+
+                                    String flattenedList = list.stream()
+                                            .map(Object::toString)
+                                            .collect(Collectors.joining(","));
+                                    builder.header("X-User-" + key, flattenedList);
+                                } else {
+                                    builder.header("X-User-" + key, value.toString());
+                                }
+                            }
+                        });
+                    }
+                    
+                    String traceId = Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Trace-Id"))
+                            .orElseGet(() -> UUID.randomUUID().toString());
+                    builder.header("X-Trace-Id", traceId);
+
+                    log.debug("User context and Trace ID [{}] added for: {}", traceId, authentication.getName());
+
+                    return chain.filter(exchange.mutate().request(builder.build()).build());
+                })
+                .switchIfEmpty(Mono.defer(() -> {
+                    String traceId = Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Trace-Id"))
+                            .orElseGet(() -> UUID.randomUUID().toString());
+
+                    ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+                            .header("X-Trace-Id", traceId)
+                            .build();
+
+                    log.trace("Anonymous request - Trace ID [{}] generated", traceId);
 
                     return chain.filter(exchange.mutate().request(mutatedRequest).build());
-                })
-                .switchIfEmpty(chain.filter(exchange));
-    }
-
-    private ServerHttpRequest addUserHeaders(ServerHttpRequest request, Authentication authentication) {
-        ServerHttpRequest.Builder builder = request.mutate();
-
-        builder.header("X-Authenticated-User", authentication.getName());
-
-        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
-            Object principal = oauthToken.getPrincipal();
-
-            if (principal instanceof OidcUser oidcUser) {
-                builder.header("X-User-Email", Optional.ofNullable(oidcUser.getEmail()).orElse(""));
-                builder.header("X-User-Name", Optional.ofNullable(oidcUser.getFullName()).orElse(""));
-            } else if (principal != null) {
-                OAuth2User oauth2User = (OAuth2User) principal;
-                builder.header("X-User-Name", Objects.requireNonNull(oauth2User.getAttribute("name")));
-                builder.header("X-User-Email", Objects.requireNonNull(oauth2User.getAttribute("email")));
-            }
-
-            Map<String, Object> attributes = oauthToken.getPrincipal().getAttributes();
-            attributes.forEach((key, value) -> {
-                if (value != null && !key.equals("sub") && !key.equals("email")) {
-                    builder.header("X-User-" + key, value.toString());
-                }
-            });
-        }
-
-        String traceId = Optional.ofNullable(request.getHeaders().getFirst("X-Trace-Id"))
-                .orElse(java.util.UUID.randomUUID().toString());
-        builder.header("X-Trace-Id", traceId);
-
-        return builder.build();
+                }));
     }
 
     @Override
     public int getOrder() {
-        return Ordered.LOWEST_PRECEDENCE - 100;
+        
+        return Ordered.HIGHEST_PRECEDENCE;
     }
 }

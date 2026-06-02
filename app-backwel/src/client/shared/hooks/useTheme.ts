@@ -6,19 +6,11 @@ export function useTheme() {
     if (stored === 'dark' || stored === 'light') {
       return stored;
     }
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light';
-    }
     return 'dark';
   });
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'light') {
-      root.setAttribute('data-theme', 'light');
-    } else {
-      root.removeAttribute('data-theme');
-    }
+    document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('backwel-theme', theme);
   }, [theme]);
 

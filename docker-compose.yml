@@ -212,6 +212,7 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
       NODE_ENV: production
+      API_GATEWAY_URL: http://api-gateway:8080
     volumes:
       - ./app-backwel/public/uploads:/app/public/uploads
     healthcheck:

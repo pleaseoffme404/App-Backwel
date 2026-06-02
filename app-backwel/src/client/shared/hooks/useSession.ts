@@ -7,6 +7,7 @@ interface User {
   email: string;
   avatar_url?: string;
   credits: number;
+  roles: string[];
 }
 
 interface SessionState {
@@ -14,26 +15,52 @@ interface SessionState {
   user?: User;
 }
 
+let globalSessionPromise: Promise<any> | null = null;
+
 export function useSession() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/v1/user/userinfo')
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
+    if (!globalSessionPromise) {
+      globalSessionPromise = fetch('/api/v1/user/userinfo')
+        .then(async (res) => {
+          if (!res.ok) {
+            const setupRes = await fetch('/api/v1/user/complete-account', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: "Admin",
+                surname: "System",
+                phoneNumber: "0000000000",
+                countryCode: "MX",
+                currencyCode: "MXN"
+              })
+            });
+            
+            if (setupRes.ok) return setupRes.json();
+            
+            const retryRes = await fetch('/api/v1/user/userinfo');
+            if (retryRes.ok) return retryRes.json();
+            
+            throw new Error();
+          }
+          return res.json();
+        });
+    }
+
+    globalSessionPromise
       .then((user) => {
         setSession({ 
           active: true, 
           user: {
-            uuid: user.uuid,
+            uuid: user.id,
             name: user.name,
             surname: user.surname,
             email: user.email,
             avatar_url: user.pictureUrl,
-            credits: 0 
+            credits: 0,
+            roles: user.role ? [user.role] : []
           } 
         });
         setIsLoading(false);
@@ -41,6 +68,7 @@ export function useSession() {
       .catch(() => {
         setSession({ active: false });
         setIsLoading(false);
+        globalSessionPromise = null;
       });
   }, []);
 
