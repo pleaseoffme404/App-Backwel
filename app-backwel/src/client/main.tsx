@@ -1,17 +1,18 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { useTheme } from './shared/hooks/useTheme';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import { AppRouter } from './core/AppRouter';
+import { useTheme } from './shared/hooks/useTheme';
 import './index.css';
 
-const App = () => {
+function ThemeProvider({ children }: { children: React.ReactNode }) {
   useTheme();
+  return <>{children}</>;
+}
 
-  return <AppRouter />;
-};
-
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ThemeProvider>
+      <AppRouter />
+    </ThemeProvider>
+  </StrictMode>
 );

@@ -4,9 +4,11 @@ import StoreLanding from '../modules/store/index';
 import POSModule from '../modules/pos/index';
 import AdminLayout from '../modules/admin/AdminLayout';
 import Dashboard from '../modules/admin/Dashboard/index';
-import LandingBuilder from '../modules/admin/LandingBuilder/index';
+import SiteBuilder from '../modules/admin/SiteBuilder/index';
+import UsuariosAdmin from '../modules/admin/Users/index';
 import Login from '../modules/auth/index';
 import AuthCallback from '../modules/auth/Callback';
+import { NotFound } from '../shared/ui/NotFound';
 
 export function AppRouter() {
   return (
@@ -18,13 +20,14 @@ export function AppRouter() {
         <Route path="/auth/callback" element={<AuthCallback />} />
         
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="landing-builder" element={<LandingBuilder />} />
-          <Route path="*" element={<Navigate to="dashboard" replace />} />
+<Route path="site-builder" element={<SiteBuilder />} />
+          <Route path="usuarios" element={<UsuariosAdmin />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

@@ -26,30 +26,32 @@ export function AboutSection({ config, isLoading }: AboutSectionProps) {
     );
   }
 
-  if (!config || !config.visible) return null;
+  if (config?.visible === false) return null;
+
+  const title = config?.title || 'Nuestra Historia';
+  const description = config?.description || 'Somos una empresa dedicada a ofrecer la mejor tecnología al alcance de todos. Nuestra misión es conectar a las personas a través de hardware de última generación y software de alto rendimiento.';
+  const imageUrl = config?.image_url || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2070';
 
   return (
     <section className="w-full py-24 bg-bg-secondary px-6">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
         <div className="flex-1 space-y-6">
           <h2 className="text-4xl md:text-5xl font-black text-text-primary tracking-tight">
-            {config.title}
+            {title}
           </h2>
-          <p className="text-xl text-text-primary/70 leading-relaxed font-medium">
-            {config.description}
+          <p className="text-xl text-text-primary/70 leading-relaxed font-medium whitespace-pre-wrap">
+            {description}
           </p>
         </div>
         
-        {config.image_url && (
-          <div className="flex-1 w-full relative">
-            <div className="absolute inset-0 bg-brand-primary/20 transform translate-x-4 translate-y-4 rounded-2xl"></div>
-            <img 
-              src={config.image_url} 
-              alt={config.title} 
-              className="relative z-10 w-full aspect-video md:aspect-square lg:aspect-video object-cover rounded-2xl shadow-xl border border-brand-primary/10"
-            />
-          </div>
-        )}
+        <div className="flex-1 w-full relative">
+          <div className="absolute inset-0 bg-brand-primary/20 transform translate-x-4 translate-y-4 rounded-2xl"></div>
+          <img 
+            src={imageUrl} 
+            alt={title} 
+            className="relative z-10 w-full aspect-video md:aspect-square lg:aspect-video object-cover rounded-2xl shadow-xl border border-brand-primary/10"
+          />
+        </div>
       </div>
     </section>
   );

@@ -89,6 +89,23 @@ export function usePageConfig() {
     }
   }, [draftConfig, clearAllDrafts]);
 
+  const createSavepoint = useCallback(() => {
+    const current = draftConfig || publishedConfig || {};
+    localStorage.setItem('backwel_savepoint', JSON.stringify(current));
+    alert('Savepoint creado con éxito.');
+  }, [draftConfig, publishedConfig]);
+
+  const restoreSavepoint = useCallback(() => {
+    const saved = localStorage.getItem('backwel_savepoint');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setHistory((h) => [...h, draftConfig || publishedConfig || {}]);
+      setDraftConfig(parsed);
+      localStorage.setItem('backwel_draft_config', saved);
+    } else {
+      alert('No hay ningún savepoint guardado.');
+    }
+  }, [draftConfig, publishedConfig]);
   return {
     publishedConfig,
     draftConfig,
@@ -96,6 +113,8 @@ export function usePageConfig() {
     updateDraft,
     undoLastChange,
     clearAllDrafts,
-    publishChanges
+    publishChanges,
+    createSavepoint,
+    restoreSavepoint
   };
 }

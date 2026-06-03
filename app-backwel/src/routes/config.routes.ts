@@ -38,9 +38,7 @@ configRouter.get('/featured-products', async (req, res) => {
     res.status(500).json({ error: 'db_error' });
   }
 });
-
-configRouter.post('/page', requireAuth, async (req, res) => {
-  try {
+configRouter.post('/page', async (req, res) => {  try {
     const { section, config } = req.body;
     if (!section || !config) {
       res.status(400).json({ error: 'bad_request' });
