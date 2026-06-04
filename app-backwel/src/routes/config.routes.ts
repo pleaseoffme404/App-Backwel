@@ -6,9 +6,9 @@ export const configRouter = Router();
 
 configRouter.get('/business', async (req, res) => {
   try {
-    const result = await pool.query('SELECT business_name, logo_url FROM business_config LIMIT 1');
+    const result = await pool.query("SELECT config FROM page_config WHERE section = 'business'");
     if (result.rows.length > 0) {
-      res.json(result.rows[0]);
+      res.json(result.rows[0].config);
     } else {
       res.status(404).json({ error: 'not_found' });
     }
