@@ -1,0 +1,11 @@
+{
+  "subject" : "Confirmación de Pedido",
+  "required_data": [
+    "customer_name",
+    "order_id",
+    "total_amount"
+  ],
+  "optional_data": [
+    "tracking_link"
+  ]
+}

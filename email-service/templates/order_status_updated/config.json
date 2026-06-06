@@ -1,0 +1,11 @@
+{
+  "subject": "Actualización del estado de tu pedido #{{order_id}}",
+  "required_data": [
+    "customer_name",
+    "order_id",
+    "new_status"
+  ],
+  "optional_data": [
+    "estimated_delivery"
+  ]
+}
