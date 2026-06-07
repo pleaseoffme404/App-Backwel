@@ -1,4 +1,22 @@
 services:
+  order-simulator:
+    build:
+      context: ./order-simulator
+      dockerfile: Dockerfile
+    container_name: order-simulator
+    restart: always
+    environment:
+      - SIMULATOR_PORT=3005
+      - EMAIL_SERVICE_URL=http://email-service:3001/emails
+      - CRON_SCHEDULE=*/1 * * * * # Ejecuta cada minuto exacto
+      - SERVICE_EMAIL_SECRET=backwel-internal-key
+    ports:
+      - "3005:3005"
+    depends_on:
+      email-service:
+        condition: service_started
+    networks:
+      - backwel-network
   auth-db:
     image: postgres:18
     container_name: auth-database
@@ -229,3 +247,7 @@ volumes:
   frontend_postgres_data:
   bff_redis_data:
   api_redis_data:
+
+networks:
+  backwel-network:
+      external: true
