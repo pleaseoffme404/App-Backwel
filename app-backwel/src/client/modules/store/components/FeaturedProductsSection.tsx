@@ -35,7 +35,7 @@ export function FeaturedProductsSection({ config, isLoading }: FeaturedProductsS
 
   const title = config?.title || 'Productos Destacados';
   const subtitle = config?.subtitle || 'Nuestra selección de artículos top para ti';
-  
+
   const placeholderProducts = [
     { id: '1', name: 'Auriculares Inalámbricos Pro', description: 'Sonido de alta fidelidad con cancelación de ruido activa.', price: 2499.00 },
     { id: '2', name: 'Teclado Mecánico RGB 60%', description: 'Switches rojos ultra rápidos ideales para gaming.', price: 1299.50 },

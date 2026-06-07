@@ -56,11 +56,13 @@ const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
     }
   };
 
-  const renderInput = (section: string, field: string, label: string, type = 'text') => {
+ const renderInput = (section: string, field: string, label: string, type = 'text', options: any[] = []) => {
     let value = activeConfig[section]?.[field];
     if (value === undefined) {
       if (type === 'checkbox') value = false;
       else if (type === 'color') value = defaultColors[field as keyof typeof defaultColors];
+      else if (type === 'range') value = 8;
+      else if (type === 'select') value = options[0]?.value;
       else value = '';
     }
     
@@ -86,6 +88,45 @@ const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
             </div>
             <span className="text-sm font-mono opacity-70 uppercase">{value}</span>
           </div>
+        </div>
+      );
+    }
+
+    if (type === 'select') {
+      return (
+        <div className="flex flex-col gap-2 mb-5">
+          <label className="text-xs font-black text-text-primary/70 uppercase tracking-wider">{label}</label>
+          <select
+            className="p-3 rounded-xl bg-bg-primary border border-brand-primary/20 text-text-primary text-sm focus:border-brand-primary focus:outline-none transition-all"
+            value={value}
+            onChange={(e) => {
+              updateDraft(section, { [field]: e.target.value });
+              const root = document.getElementById('preview-container');
+              if (root && field === 'font_family') root.style.setProperty('--font-family-global', e.target.value);
+            }}
+          >
+            {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+        </div>
+      );
+    }
+
+    if (type === 'range') {
+      return (
+        <div className="flex flex-col gap-2 mb-5">
+          <label className="text-xs font-black text-text-primary/70 uppercase tracking-wider">{label} ({value}px)</label>
+          <input 
+            type="range"
+            min="0"
+            max="32"
+            className="w-full h-2 bg-brand-primary/20 rounded-lg appearance-none cursor-pointer accent-brand-primary"
+            value={value}
+            onChange={(e) => {
+              updateDraft(section, { [field]: parseInt(e.target.value) });
+              const root = document.getElementById('preview-container');
+              if (root && field === 'border_radius') root.style.setProperty('--radius-global', `${e.target.value}px`);
+            }}
+          />
         </div>
       );
     }
@@ -295,9 +336,20 @@ const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
                   {renderInput('theme', 'light_bg_secondary', 'Fondo Sec.', 'color')}
                   {renderInput('theme', 'light_brand_primary', 'Marca Princ.', 'color')}
                   {renderInput('theme', 'light_brand_secondary', 'Marca Sec.', 'color')}
-                  {renderInput('theme', 'light_accent', 'Acento/Botón', 'color')}
+                   {renderInput('theme', 'light_accent', 'Acento/Botón', 'color')}
                   {renderInput('theme', 'light_text_primary', 'Texto', 'color')}
                 </div>
+              </section>
+
+              <section>
+                <h2 className="text-xl font-black text-brand-primary mb-6 flex items-center gap-2"><span className="w-8 h-px bg-brand-primary/30"></span> Estructura Global</h2>
+                {renderInput('theme', 'border_radius', 'Redondez de Contenedores', 'range')}
+                {renderInput('theme', 'font_family', 'Tipografía Global', 'select', [
+                  { value: 'Inter, sans-serif', label: 'Inter (Moderna)' },
+                  { value: 'Roboto, sans-serif', label: 'Roboto (Elegante)' },
+                  { value: 'Space Grotesk, sans-serif', label: 'Space Grotesk (Tecnológica)' },
+                  { value: 'Merriweather, serif', label: 'Merriweather (Clásica)' }
+                ])}
               </section>
             </>
           )}

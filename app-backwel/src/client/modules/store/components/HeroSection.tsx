@@ -24,19 +24,33 @@ export function HeroSection({ config, isLoading }: HeroSectionProps) {
 
   if (config?.visible === false) return null;
 
-  const bgImage = config?.bg_image_url || 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070';
+  const bgUrl = config?.bg_image_url || 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070';
   const title = config?.title || 'Construyendo el futuro de tus compras';
   const subtitle = config?.subtitle || 'Bienvenido a la plataforma más rápida y segura. Descubre nuestro catálogo.';
   const ctaText = config?.cta_text || 'Explorar ahora';
 
+  const isVideo = bgUrl.match(/\.(mp4|webm|ogg)$/i);
+
   return (
     <section className="relative w-full h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden bg-bg-primary">
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-700"
-        style={{ backgroundImage: `url(${bgImage})` }}
-      >
-        <div className="absolute inset-0 bg-bg-primary/80 backdrop-blur-sm" />
-      </div>
+      {isVideo ? (
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        >
+          <source src={bgUrl} type={`video/${bgUrl.split('.').pop()}`} />
+        </video>
+      ) : (
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-700 z-0"
+          style={{ backgroundImage: `url(${bgUrl})` }}
+        />
+      )}
+
+      <div className="absolute inset-0 bg-bg-primary/80 backdrop-blur-sm z-0" />
 
       <div className="relative z-10 flex flex-col items-center text-center p-6 max-w-4xl mx-auto">
         <h1 className="text-5xl md:text-7xl font-black text-text-primary tracking-tighter mb-6 drop-shadow-2xl">
