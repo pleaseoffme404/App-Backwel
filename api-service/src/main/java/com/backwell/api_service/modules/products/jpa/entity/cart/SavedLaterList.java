@@ -6,7 +6,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +47,8 @@ public class SavedLaterList {
     )
     private List<SavedLaterItem> items = new ArrayList<>();
 
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant lastUpdate;
 
     @PrePersist

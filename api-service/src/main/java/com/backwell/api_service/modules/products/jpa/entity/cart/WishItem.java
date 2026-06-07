@@ -6,7 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -33,6 +35,8 @@ public class WishItem {
     @JoinColumn(name = "item_id", nullable = false, updatable = false)
     private Item item;
 
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     Instant lastUpdate;
 
     public WishItem(UUID id, Item item) {

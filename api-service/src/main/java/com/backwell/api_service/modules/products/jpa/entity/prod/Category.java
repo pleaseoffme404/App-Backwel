@@ -2,7 +2,9 @@ package com.backwell.api_service.modules.products.jpa.entity.prod;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,7 @@ public class Category {
     private List<Category> children = new ArrayList<>();
 
     @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant createdAt;
 
     @PrePersist
@@ -68,4 +71,5 @@ public class Category {
         children.remove(child);
         child.setParent(null);
     }
+
 }

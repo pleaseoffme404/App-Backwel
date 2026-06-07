@@ -64,7 +64,7 @@ public class UserContextGlobalFilter implements GlobalFilter, Ordered {
                             }
                         });
                     }
-                    
+
                     String traceId = Optional.ofNullable(exchange.getRequest().getHeaders().getFirst("X-Trace-Id"))
                             .orElseGet(() -> UUID.randomUUID().toString());
                     builder.header("X-Trace-Id", traceId);
@@ -89,7 +89,7 @@ public class UserContextGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        
+
         return Ordered.HIGHEST_PRECEDENCE;
     }
 }

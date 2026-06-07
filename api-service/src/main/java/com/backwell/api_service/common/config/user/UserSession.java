@@ -7,10 +7,7 @@ import static com.backwell.enums.JwtClaim.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -23,15 +20,25 @@ public record UserSession (
 ) {
 
     public static UserSession fromJwt(Jwt jwt) {
+        log.info("[DEBUG JWT] Full claims map payload: {}", jwt.getClaims());
+
         String userIdStr = jwt.getClaimAsString(USER_ID.key());
         UUID uuid = userIdStr != null ? UUID.fromString(userIdStr) : null;
 
         String email = jwt.getClaimAsString(EMAIL.key());
 
-        List<String> rawRoles = Optional.ofNullable(jwt.getClaimAsStringList(ROLES.key()))
-                .orElse(List.of());
+        List<String> rawRoles = new ArrayList<>();
 
-        log.info("User session processed with raw roles: [{}]", rawRoles);
+        if (jwt.hasClaim(ROLES.key())){
+            List<String> claimsList = jwt.getClaimAsStringList(ROLES.key());
+            if (claimsList != null) {
+                rawRoles = claimsList;
+            }
+        } else {
+            log.warn("[DEBUG JWT] The configured ROLES claim key [{}] WAS NOT FOUND in this token.", ROLES.key());
+        }
+
+        log.info("[DEBUG JWT] Roles processed for this session: {}", rawRoles);
 
         Set<RoleName> roles = !rawRoles.isEmpty()
                 ? rawRoles.stream().map(RoleName::fromString).collect(Collectors.toSet())

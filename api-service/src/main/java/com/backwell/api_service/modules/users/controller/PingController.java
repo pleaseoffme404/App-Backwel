@@ -46,29 +46,10 @@ public class PingController {
         }
 
         return ResponseEntity.ok(Map.of(
-                "subject", jwt.getSubject(),               // El UUID del usuario (sub)
-                "issuer", jwt.getIssuer().toString(),      // Quien emitió el token (iss)
-                "claims", jwt.getClaims(),                 // Todos los datos del usuario
-                "authorities", jwt.getClaimAsStringList("scope") // Scopes (openid, profile, etc)
+                "subject", jwt.getSubject(),
+                "issuer", jwt.getIssuer().toString(),
+                "claims", jwt.getClaims(),
+                "authorities", jwt.getClaimAsStringList("scope")
         ));
-    }
-
-    /**
-     * 3. DEBUG DE CABECERAS
-     * Verifica físicamente qué le está mandando el Gateway al API Service.
-     * Útil para ver si llega el header 'Authorization: Bearer ...'
-     */
-    @GetMapping("/headers")
-    public ResponseEntity<Map<String, String>> debugHeaders(HttpServletRequest request) {
-        Map<String, String> headers = new HashMap<>();
-        Collections.list(request.getHeaderNames())
-                .forEach(h -> headers.put(h, request.getHeader(h)));
-
-        // Maskeamos el token por seguridad en los logs
-        if (headers.containsKey("authorization")) {
-            headers.computeIfPresent("authorization", (k, auth) -> auth.substring(0, 15) + "...");
-        }
-
-        return ResponseEntity.ok(headers);
     }
 }

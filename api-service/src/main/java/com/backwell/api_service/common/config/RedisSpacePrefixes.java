@@ -1,17 +1,11 @@
 package com.backwell.api_service.common.config;
 
 
-import lombok.Data;
+import org.springframework.stereotype.Component;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
-
-import java.util.UUID;
-
-@Configuration
-@Data
-@ConfigurationProperties(prefix = "app.redis.namespaces")
+@Component
 public class RedisSpacePrefixes {
-    private String stock;
-    private String referralCodes;
+    public final String INVITATION_EMAIL_INDEX_PREFIX = "invitation:pending_email:";
+    public final String INVITATION_CODE_PREFIX = "invitation:code:";
+    public final String INVENTORY_STOCK_PREFIX = "inventory:stock:";
 }

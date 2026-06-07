@@ -2,11 +2,10 @@ package com.backwell.api_service.modules.users.service;
 
 import com.backwell.api_service.common.config.user.UserSession;
 import com.backwell.api_service.common.exception.BusinessException;
-import com.backwell.api_service.common.exception.YouAreAnIdiotException;
 import com.backwell.api_service.modules.users.dto.CreateAddressDTO;
 import com.backwell.api_service.modules.users.dto.UpdateAddressRequest;
 import com.backwell.api_service.modules.users.dto.UserAddressDTO;
-import com.backwell.api_service.modules.users.entity.UserAddress;
+import com.backwell.api_service.modules.users.entity.address.UserAddress;
 import com.backwell.api_service.modules.users.repo.UserAddressRepository;
 import com.backwell.api_service.modules.users.repo.UserInfoRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +40,7 @@ public class UserAddressService {
         );
 
         if (userAddresses.size() >= 4) {
-            throw new BusinessException("Máximo de 4 direcciones alcanzado.", MAX_ADDRESS_LIMIT_REACHED.name());
+            throw new BusinessException("Máximo de 4 direcciones alcanzado.", MAX_ADDRESS_LIMIT_REACHED);
         }
 
         int targetIndex = (dto.slotIndex() == null) ? userAddresses.size() : dto.slotIndex();
@@ -65,7 +64,7 @@ public class UserAddressService {
     @Transactional
     public List<UserAddressDTO> updateAddress(UserSession session, UpdateAddressRequest request) {
         UserAddress target = userAddressRepository.findByUser_UuidAndSlotIndex(session.uuid(), request.slotIndex())
-                .orElseThrow(() -> new BusinessException("No Address was found for current ID", ADDRESS_NOT_FOUND.name()));
+                .orElseThrow(() -> new BusinessException("No Address was found for current ID", ADDRESS_NOT_FOUND));
 
         if (request.addressName() != null) {
             target.setInternalName(request.addressName());
@@ -87,7 +86,7 @@ public class UserAddressService {
 
         int affectedRows = userAddressRepository.deleteByUser_UuidAndSlotIndex(session.uuid(), slotIndex);
         if (affectedRows == 0) {
-            throw new BusinessException("Requested deletion was not found. No changes were made.", ADDRESS_NOT_FOUND.name());
+            throw new BusinessException("Requested deletion was not found. No changes were made.", ADDRESS_NOT_FOUND);
         }
 
         // Get and Reindex

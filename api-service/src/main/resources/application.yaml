@@ -10,6 +10,8 @@ spring:
     username: ${API_DB_USER}
     password: ${API_DB_PASSWORD}
 
+  jackson:
+    time-zone: UTC
   jpa:
     defer-datasource-initialization: false
     generate-ddl: false
@@ -26,6 +28,8 @@ spring:
         highlight_sql: true
         jdbc:
           time_zone: UTC
+        type:
+          prerred_instant_jdbc_type: TIMESTAMP_WITH_TIME_ZONE
 
   security:
     oauth2:
@@ -56,13 +60,23 @@ eureka:
 app:
   sqids:
     min-length: 10
-  redis:
-    namespaces:
-      stock: inv:stock
-      referral-codes: referral:codes
+
   meilisearch:
     host: ${MEILISEARCH_HOST:http://localhost:7700}
     api-key: ${MEILISEARCH_MASTER_KEY:masterkey}
+    index:
+      batch-size: 500
+      poll-interval-millis: 300000
+
+
+  invitation:
+    commission:
+      calculation-strategy: logarithmic
+      percentage: 10.0
+      AFactor: 1.5
+    discount:
+      discount-percentage: 15.0
+
 
 logging:
   level:

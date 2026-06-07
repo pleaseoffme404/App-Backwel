@@ -15,10 +15,17 @@ import java.util.UUID;
 @Repository
 public interface CartRepository extends JpaRepository<Cart, UUID> {
 
-    @EntityGraph(value = Cart_.GRAPH_CART_WITH_ITEMS_AND_VARIANTS, type = EntityGraph.EntityGraphType.LOAD)
+    @EntityGraph(value = Cart_.GRAPH_CART_WITH_CONTENT_AND_ITEMS, type = EntityGraph.EntityGraphType.LOAD)
     @Query("""
 SELECT c
 FROM Cart c
 WHERE c.userInfo.uuid = :userId""")
     Optional<Cart> findCartForUserId(@Param("userId") UUID userId);
+
+    @EntityGraph(value =  Cart_.GRAPH_CART_FETCH_DETAILS_FOR_AUDITING, type = EntityGraph.EntityGraphType.LOAD)
+    @Query("""
+SELECT c
+FROM Cart c
+WHERE c.userInfo.uuid = :userId""")
+    Optional<Cart> findCartForUserIdAudit(@Param("userId") UUID userId);
 }

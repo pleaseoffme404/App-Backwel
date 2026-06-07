@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.13</version>
+		<version>3.5.14</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.backwell</groupId>
@@ -128,7 +128,12 @@
 			<groupId>com.meilisearch.sdk</groupId>
 			<artifactId>meilisearch-java</artifactId>
 			<version>0.17.1</version>
-		</dependency>
+		</dependency><!--					<jdbc>-->
+<!--						<driver>org.postgresql.Driver</driver>-->
+<!--						<url>jdbc:postgresql://127.0.0.1:5434/api-database</url>-->
+<!--						<user>admin</user>-->
+<!--						<password>testing</password>-->
+<!--					</jdbc>-->
 
 <!--		Hash ID Dependency-->
 		<dependency>
@@ -157,6 +162,27 @@
 			<version>1.22.2</version>
 			<scope>compile</scope>
 		</dependency>
+
+<!--		Big Decimal Dependency for meticulous calculations-->
+		<dependency>
+			<groupId>ch.obermuhlner</groupId>
+			<artifactId>big-math</artifactId>
+			<version>2.3.2</version>
+			<scope>compile</scope>
+		</dependency>
+
+<!--		Retryable Dependency-->
+		<dependency>
+			<groupId>org.springframework.retry</groupId>
+			<artifactId>spring-retry</artifactId>
+		</dependency>
+
+		<!-- Required for @Retryable Annotation Support -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-aop</artifactId>
+		</dependency>
+
 
 
 	</dependencies>
@@ -213,12 +239,6 @@
 				</dependencies>
 
 				<configuration>
-<!--					<jdbc>-->
-<!--						<driver>org.postgresql.Driver</driver>-->
-<!--						<url>jdbc:postgresql://127.0.0.1:5434/api-database</url>-->
-<!--						<user>admin</user>-->
-<!--						<password>testing</password>-->
-<!--					</jdbc>-->
 
 					<generator>
 						<database>

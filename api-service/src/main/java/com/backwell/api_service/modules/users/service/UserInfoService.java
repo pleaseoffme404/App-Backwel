@@ -9,19 +9,22 @@ import com.backwell.api_service.modules.products.jpa.entity.cart.WishList;
 import com.backwell.api_service.modules.products.jpa.repo.WishListRepository;
 import com.backwell.api_service.modules.products.jpa.repo.cart.CartRepository;
 import com.backwell.api_service.modules.products.jpa.repo.cart.SavedLaterListRepository;
+import com.backwell.api_service.modules.invitations.InvitationMetadata;
+import com.backwell.api_service.modules.invitations.service.InvitationService;
 import com.backwell.api_service.modules.users.dto.CompleteAccountRequest;
 import com.backwell.api_service.modules.users.dto.UpdateUserInfoRequest;
 import com.backwell.api_service.modules.users.dto.UserInfoDTO;
 import com.backwell.api_service.modules.users.entity.UserInfo;
+import com.backwell.api_service.modules.users.entity.credit.UserCredit;
+import com.backwell.api_service.modules.users.repo.UserCreditRepository;
 import com.backwell.api_service.modules.users.repo.UserInfoRepository;
 import com.backwell.enums.RoleName;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.UriUtils;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import static com.backwell.api_service.common.exception.codes.UserErrorCode.*;
 
@@ -34,21 +37,29 @@ public class UserInfoService {
     private final SavedLaterListRepository savedLaterListRepository;
     private final WishListRepository wishListRepository;
     private final UUIDService uuidService;
+    private final InvitationService invitationService;
+    private final UserCreditRepository userCreditRepository;
+
 
     @Transactional
-    public UserInfoDTO completeAccount(
-            UserSession session,
-            CompleteAccountRequest req
-    ) {
+    public UserInfoDTO completeAccount(UserSession session, CompleteAccountRequest req) {
         if (userInfoRepository.existsByUuid(session.uuid()) || userInfoRepository.existsByEmail(session.email())) {
-            throw new BusinessException("This Account has already been completed.", ACCOUNT_COMPLETED.name());
+            throw new BusinessException("This Account has already been completed.", ACCOUNT_COMPLETED);
         }
+        Optional<InvitationMetadata> referral = invitationService.validateAndGet(req, session.email());
 
         // This fucking method already manages the first address creation for an easy persistence
         UserInfo userInfo = UserInfo.from(req, session);
 
         UserInfo saved = userInfoRepository.saveAndFlush(userInfo);
+
         createUserDependencies(saved);
+
+        // Apply the invitation Code if a code was presented.
+        referral.ifPresent(r-> invitationService.persistUsage(
+                saved, req.invitationCode().toString(), r
+        ));
+
         return buildDTO(saved, session);
     }
 
@@ -99,5 +110,8 @@ public class UserInfoService {
 
         // Create the user's default wish list
         wishListRepository.save(WishList.initForUser(uuidService.next(), savedUser));
+
+        // Create a credit Registry with 0 credits
+        userCreditRepository.save(new UserCredit(savedUser));
     }
 }

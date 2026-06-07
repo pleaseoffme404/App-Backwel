@@ -5,6 +5,8 @@ import com.backwell.api_service.validators.ValidCurrencyCode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.URL;
+import org.hibernate.validator.constraints.UUID;
+
 
 import java.util.Currency;
 
@@ -39,6 +41,8 @@ public record CompleteAccountRequest(
         @Size(max = 2048)
         String avatarUrl,
 
+        @UUID
+        java.util.UUID invitationCode,
 
         @NotBlank
         @Size(min = 3, max = 100)

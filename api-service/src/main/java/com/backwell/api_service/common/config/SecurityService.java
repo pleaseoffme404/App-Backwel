@@ -8,8 +8,6 @@ import org.springframework.stereotype.Component;
 
 @Component("auth")
 public class SecurityService {
-
-
     public boolean isAdmin() {
         return hasRole(RoleName.ADMIN);
     }
@@ -25,7 +23,6 @@ public class SecurityService {
     public boolean hasRole(RoleName role) {
         UserSession session = getUserSession();
         if (session == null) return false;
-
         return session.roles().contains(role);
     }
 

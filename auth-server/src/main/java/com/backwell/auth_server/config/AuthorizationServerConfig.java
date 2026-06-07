@@ -2,20 +2,16 @@ package com.backwell.auth_server.config;
 
 import com.backwell.auth_server.config.properties.ClientRegistrationProperties;
 import com.backwell.auth_server.config.properties.JwtProperties;
-import com.backwell.auth_server.jpa.service.JpaUserService;
 import com.backwell.auth_server.security.mixin.AppOidcUserMixin;
 import com.backwell.auth_server.security.mixin.AppUserDetailsMixin;
 import com.backwell.auth_server.security.mixin.UserDTOMixin;
 import com.backwell.auth_server.security.service.UserSecurityService;
 import com.backwell.auth_server.security.user.AppOidcUser;
 import com.backwell.auth_server.security.user.AppUserDetails;
-import com.backwell.auth_server.security.user.IdentityContainer;
 import com.backwell.auth_server.security.user.UserDTO;
 import com.backwell.auth_server.service.UUIDGeneratorService;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -38,7 +34,10 @@ import org.springframework.security.oauth2.client.web.AuthorizationRequestReposi
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.authorization.*;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -46,8 +45,6 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
-import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
@@ -73,7 +70,6 @@ public class AuthorizationServerConfig {
     private final UserSecurityService userSecurityService;
     private final CustomAccessDeniedHandler accessDeniedHandler;
     private final FederatedIdentitySuccessHandler federatedIdentitySuccessHandler;
-    private final TokenClaimsEnhancer claimsEnhancer;
 
     private String[] whiteList() {
         return new String[]{
@@ -192,7 +188,6 @@ public class AuthorizationServerConfig {
                 .build();
     }
 
-    
     @Bean
     public OAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
         JdbcOAuth2AuthorizationService service = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);

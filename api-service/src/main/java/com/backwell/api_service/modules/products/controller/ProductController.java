@@ -1,38 +1,58 @@
 package com.backwell.api_service.modules.products.controller;
 
+import com.backwell.api_service.common.config.user.UserSession;
+import com.backwell.api_service.modules.products.controller.req.CreateProductRequest;
+import com.backwell.api_service.modules.products.controller.req.UpdateProductInfoRequest;
+import com.backwell.api_service.modules.products.controller.res.ProductDTO;
+import com.backwell.api_service.modules.products.service.ProductService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/inventory")
+@RequestMapping("/products")
+@Validated
 public class ProductController {
-    /*
-    * private final InventoryService inventoryService;
+    private final ProductService productService;
 
-    @PostMapping("/category")
-    public ResponseEntity<Categoria> categoria(@RequestBody CategoryDTO dto) {
-        var response = inventoryService.addCategory(dto.name());
+    @PostMapping("/")
+    public ResponseEntity<ProductDTO> createProduct(
+            @Valid @RequestBody CreateProductRequest req
+    ) {
+        ProductDTO response = productService.create(req);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/provider")
-    public ResponseEntity<Proveedor> proveedor(@RequestBody ProviderDTO dto) {
-        var response = inventoryService.addProveedor(dto.name());
-        return ResponseEntity.ok(response);
+    @GetMapping("/")
+    public ResponseEntity<ProductDTO> getProductInfo(@NotNull @RequestParam UUID productId) {
+        var response = productService.getInfo(productId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PostMapping("/product")
-    public ResponseEntity<Producto> producto(@Valid@RequestBody ProductPostDTO dto) {
-        final var names = dto.getAttributeNames();
-        dto.getVariants().forEach(v -> {
-            if (!names.equals(v.getVariantAttributes().keySet())) {
-                throw new IllegalStateException("Variant attributes must match declared product Attributes");
-            }
-        });
+    @PatchMapping("/")
+    public ResponseEntity<ProductDTO> updateProductInfo(
+            @NotNull @RequestParam UUID productId,
+            @Valid @RequestBody UpdateProductInfoRequest req
+    ) {
+        var response = productService.updateProductInfo(productId, req);
+        return ResponseEntity.accepted().body(response);
+    }
 
-        inventoryService.newProduct(dto);
-        return ResponseEntity.ok(new Producto());
-    }*/
+    @PatchMapping("/category-update")
+    public ResponseEntity<ProductDTO> updateProductCategory(
+            @NotNull @RequestParam UUID productId,
+            @NotNull @RequestParam UUID newCategoryId
+    ) {
+        var response = productService.updateCategory(productId, newCategoryId);
+        return ResponseEntity.accepted().body(response);
+    }
+
+
 }

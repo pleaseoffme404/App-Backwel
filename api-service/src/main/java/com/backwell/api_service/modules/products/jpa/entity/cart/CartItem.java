@@ -6,7 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -36,6 +38,8 @@ public class CartItem {
     @Setter
     private Integer savedQuantity;
 
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant lastUpdate;
 
     @PrePersist
@@ -52,5 +56,12 @@ public class CartItem {
         this.id = id;
         this.item = item;
         this.savedQuantity = savedQuantity;
+    }
+
+
+    /**
+     * @implNote To use only when it's secure you won't get a lazy initialization exception because of an expired hibernate session*/
+    public UUID getItemId(){
+        return item.getId();
     }
 }

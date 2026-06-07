@@ -1,6 +1,6 @@
 package com.backwell.api_service.modules.users.dto;
 
-import com.backwell.api_service.modules.users.entity.GoogleAddress;
+import com.backwell.api_service.modules.users.entity.address.GoogleAddress;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.Length;

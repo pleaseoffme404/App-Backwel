@@ -2,7 +2,9 @@ package com.backwell.api_service.modules.products.jpa.entity.prod;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
@@ -18,6 +20,22 @@ import java.util.UUID;
                 @Index(name = "idx_product_name", columnList = "name", unique = true),
                 @Index(name = "idx_product_created_at", columnList = "created_at DESC"),
                 @Index(name = "idx_product_category", columnList = "category_id"),
+        }
+)
+@NamedEntityGraph(
+        name = "Product.fetchPostCreationDetails",
+        attributeNodes = {
+                @NamedAttributeNode("attributes"),
+                @NamedAttributeNode(value = "items", subgraph = "item-details-subgraph")
+        },
+        subgraphs = {
+                @NamedSubgraph(
+                        name = "item-details-subgraph",
+                        attributeNodes = {
+                                @NamedAttributeNode("pictures"),
+                                @NamedAttributeNode("attributes")
+                        }
+                )
         }
 )
 @Builder
@@ -61,7 +79,12 @@ public class Product {
     @Builder.Default
     private Set<Item> items = new HashSet<>();
 
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant createdAt;
+
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant updatedAt;
 
     @PrePersist
@@ -97,5 +120,9 @@ public class Product {
     public void removeItem(Item item) {
         items.remove(item);
         item.setProduct(null);
+    }
+
+    public UUID getCategoryId() {
+        return category.getId();
     }
 }

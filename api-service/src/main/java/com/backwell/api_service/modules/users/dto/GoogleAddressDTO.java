@@ -1,6 +1,6 @@
 package com.backwell.api_service.modules.users.dto;
 
-import com.backwell.api_service.modules.users.entity.GoogleAddress;
+import com.backwell.api_service.modules.users.entity.address.GoogleAddress;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 

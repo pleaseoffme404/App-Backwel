@@ -2,8 +2,10 @@ package com.backwell.api_service.modules.products.jpa.entity.prod;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 
 import java.math.BigDecimal;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.*;
 
@@ -17,8 +19,10 @@ import java.util.*;
         indexes = {
                 @Index(name = "idx_item_product", columnList = "product_id"),
                 @Index(name = "idx_item_price", columnList = "base_price"),
+                @Index(name = "idx_item_vissible", columnList = "visible")
         }
 )
+@Builder
 public class Item {
     @Id
     @Setter(AccessLevel.NONE)
@@ -47,7 +51,10 @@ public class Item {
     @OrderBy("order ASC")
     private List<ItemPicture> pictures = new ArrayList<>();
 
-    @Column(nullable = false)
+
+    /**
+     * When created, the base price is directly persisted without creating a record in the base price change track*/
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal basePrice;
 
     @Column(nullable = false)
@@ -57,9 +64,13 @@ public class Item {
     private boolean visible;
 
     @Setter(AccessLevel.NONE)
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant createdAt;
 
     @Setter(AccessLevel.NONE)
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant updatedAt;
 
     @PrePersist
@@ -117,5 +128,9 @@ public class Item {
         if (obj == null || getClass() != obj.getClass()) return false;
         Item that = (Item) obj;
         return Objects.equals(id, that.id);
+    }
+
+    public UUID getProductId(){
+        return product.getId();
     }
 }

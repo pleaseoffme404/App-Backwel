@@ -6,7 +6,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -37,6 +39,7 @@ public class SavedLaterItem {
     private Item item;
 
     @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant updatedAt;
 
     @PrePersist
@@ -49,9 +52,13 @@ public class SavedLaterItem {
         updatedAt = Instant.now();
     }
 
+
     public SavedLaterItem(UUID id, Item item) {
         this.id = id;
         this.item = item;
     }
 
+    public UUID getItemId() {
+        return item.getId();
+    }
 }

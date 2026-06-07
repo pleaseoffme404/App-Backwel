@@ -1,5 +1,6 @@
 package com.backwell.api_service.modules.products.meilisearch;
 
+import com.backwell.api_service.modules.products.meilisearch.dto.IndexableProductDTO;
 import com.meilisearch.sdk.Client;
 import com.meilisearch.sdk.Index;
 import com.meilisearch.sdk.model.Settings;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MeilisearchInitializer implements CommandLineRunner {
     private final Client client;
-    private final ItemSearchEventListener searchService;
 
     @Override
     public void run(String... args) throws Exception {

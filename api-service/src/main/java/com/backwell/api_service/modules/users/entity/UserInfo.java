@@ -2,6 +2,7 @@ package com.backwell.api_service.modules.users.entity;
 
 import com.backwell.api_service.common.config.user.UserSession;
 import com.backwell.api_service.modules.users.dto.CompleteAccountRequest;
+import com.backwell.api_service.modules.users.entity.address.UserAddress;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.web.util.UriUtils;
@@ -100,7 +101,7 @@ public class UserInfo {
 
     /**
      * Creates a UserInfo instance with the provided values
-     * @implNote This method returns an object with NO ADDRESSES, only an appendable array list*/
+     * */
     public static UserInfo from(CompleteAccountRequest req, UserSession session) {
         String avatarUrl = buildDefaultAvatar(req.name(), req.surname());
         UserInfo user = new UserInfo(

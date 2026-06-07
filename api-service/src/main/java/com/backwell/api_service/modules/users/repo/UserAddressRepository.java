@@ -1,7 +1,7 @@
 package com.backwell.api_service.modules.users.repo;
 
 import com.backwell.api_service.modules.users.dto.UserAddressDTO;
-import com.backwell.api_service.modules.users.entity.UserAddress;
+import com.backwell.api_service.modules.users.entity.address.UserAddress;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

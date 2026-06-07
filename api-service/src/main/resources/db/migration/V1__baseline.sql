@@ -1,59 +1,89 @@
-CREATE SEQUENCE IF NOT EXISTS discount_seq START WITH 1 INCREMENT BY 50;
+CREATE SEQUENCE IF NOT EXISTS discount_target_seq START WITH 1 INCREMENT BY 50;
 
 CREATE SEQUENCE IF NOT EXISTS error_logs_seq START WITH 1 INCREMENT BY 50;
 
-CREATE SEQUENCE IF NOT EXISTS item_price_history_seq START WITH 1 INCREMENT BY 5;
+CREATE SEQUENCE IF NOT EXISTS item_base_price_change_track_seq START WITH 1 INCREMENT BY 100;
+
+CREATE SEQUENCE IF NOT EXISTS price_calculation_history_seq START WITH 1 INCREMENT BY 100;
 
 CREATE SEQUENCE IF NOT EXISTS user_address_seq START WITH 1 INCREMENT BY 50;
 
+CREATE SEQUENCE IF NOT EXISTS user_credit_seq START WITH 1 INCREMENT BY 50;
+
 CREATE TABLE cart
 (
-    id          UUID NOT NULL,
-    user_id     UUID NOT NULL,
-    last_update TIMESTAMP WITHOUT TIME ZONE,
+    id          UUID                     NOT NULL,
+    user_id     UUID                     NOT NULL,
+    last_update TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_cart PRIMARY KEY (id)
 );
 
 CREATE TABLE cart_item
 (
-    id             UUID NOT NULL,
+    id             UUID                     NOT NULL,
     cart_id        UUID,
-    variant_id     UUID NOT NULL,
+    variant_id     UUID                     NOT NULL,
     saved_quantity INTEGER,
-    last_update    TIMESTAMP WITHOUT TIME ZONE,
+    last_update    TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_cartitem PRIMARY KEY (id)
 );
 
 CREATE TABLE category
 (
-    id         UUID                        NOT NULL,
-    name       VARCHAR(100)                NOT NULL,
+    id         UUID                     NOT NULL,
+    name       VARCHAR(100)             NOT NULL,
     parent_id  UUID,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_category PRIMARY KEY (id)
+);
+
+CREATE TABLE credit_transaction
+(
+    id         UUID                        NOT NULL,
+    user_id    UUID                        NOT NULL,
+    type       VARCHAR(255)                NOT NULL,
+    delta      DECIMAL                     NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT pk_credittransaction PRIMARY KEY (id)
+);
+
+CREATE TABLE cupon
+(
+    id             UUID                        NOT NULL,
+    name           VARCHAR(255)                NOT NULL,
+    type           VARCHAR(255)                NOT NULL,
+    user_id        UUID                        NOT NULL,
+    decimal_factor DECIMAL                     NOT NULL,
+    active         BOOLEAN                     NOT NULL,
+    stackable      BOOLEAN                     NOT NULL,
+    used_at        TIMESTAMP WITHOUT TIME ZONE,
+    created_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT pk_cupon PRIMARY KEY (id)
 );
 
 CREATE TABLE discount
 (
-    id            BIGINT                      NOT NULL,
-    name          VARCHAR(255)                NOT NULL,
-    decimal_value DECIMAL                     NOT NULL,
-    stackable     BOOLEAN                     NOT NULL,
-    start_date    TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    end_date      TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    active        BOOLEAN                     NOT NULL,
-    last_update   TIMESTAMP WITHOUT TIME ZONE,
-    created_at    TIMESTAMP WITHOUT TIME ZONE,
+    id             UUID                        NOT NULL,
+    name           VARCHAR(255)                NOT NULL,
+    decimal_value  DECIMAL(5, 4)               NOT NULL,
+    decimal_factor DECIMAL(5, 4)               NOT NULL,
+    stackable      BOOLEAN                     NOT NULL,
+    start_date     TIMESTAMP WITH TIME ZONE    NOT NULL,
+    end_date       TIMESTAMP WITH TIME ZONE    NOT NULL,
+    active         BOOLEAN                     NOT NULL,
+    last_update    TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    created_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     CONSTRAINT pk_discount PRIMARY KEY (id)
 );
 
 CREATE TABLE discount_target
 (
-    discount_id BIGINT NOT NULL,
+    id          BIGINT NOT NULL,
+    discount_id UUID   NOT NULL,
     category_id UUID,
     product_id  UUID,
     item_id     UUID,
-    CONSTRAINT pk_discounttarget PRIMARY KEY (discount_id)
+    CONSTRAINT pk_discounttarget PRIMARY KEY (id)
 );
 
 CREATE TABLE error_logs
@@ -73,7 +103,7 @@ CREATE TABLE error_logs
 CREATE TABLE inventory_trace
 (
     id                 UUID NOT NULL,
-    item_id            UUID,
+    item_id            UUID NOT NULL,
     physical_balance   INTEGER,
     physical_delta     INTEGER,
     available_balance  INTEGER,
@@ -82,20 +112,31 @@ CREATE TABLE inventory_trace
     redundancy_delta   INTEGER,
     reserved_balance   INTEGER,
     reserved_delta     INTEGER,
-    timestamp          TIMESTAMP WITHOUT TIME ZONE,
+    timestamp          TIMESTAMP WITH TIME ZONE,
     CONSTRAINT pk_inventorytrace PRIMARY KEY (id)
+);
+
+CREATE TABLE invitation_trace
+(
+    id              UUID                     NOT NULL,
+    inviting_id     UUID                     NOT NULL,
+    invited_uuid    UUID                     NOT NULL,
+    invitation_code VARCHAR(255)             NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    burned_at       TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT pk_invitationtrace PRIMARY KEY (id)
 );
 
 CREATE TABLE item
 (
-    id            UUID         NOT NULL,
-    sku           VARCHAR(255) NOT NULL,
+    id            UUID                     NOT NULL,
+    sku           VARCHAR(255)             NOT NULL,
     product_id    UUID,
-    base_price    DECIMAL      NOT NULL,
-    logical_limit INTEGER      NOT NULL,
-    visible       BOOLEAN      NOT NULL,
-    created_at    TIMESTAMP WITHOUT TIME ZONE,
-    updated_at    TIMESTAMP WITHOUT TIME ZONE,
+    base_price    DECIMAL(12, 2)           NOT NULL,
+    logical_limit INTEGER                  NOT NULL,
+    visible       BOOLEAN                  NOT NULL,
+    created_at    TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at    TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_item PRIMARY KEY (id)
 );
 
@@ -108,6 +149,24 @@ CREATE TABLE item_attribute
     CONSTRAINT pk_itemattribute PRIMARY KEY (id)
 );
 
+CREATE TABLE item_base_price_change_track
+(
+    id                     BIGINT                   NOT NULL,
+    item_id                UUID                     NOT NULL,
+    new_price              DECIMAL(12, 2)           NOT NULL,
+    created_at             TIMESTAMP WITH TIME ZONE NOT NULL,
+    checked_by_transaction UUID,
+    CONSTRAINT pk_itembasepricechangetrack PRIMARY KEY (id)
+);
+
+CREATE TABLE item_creation_track
+(
+    item_id                UUID                     NOT NULL,
+    checked_by_transaction UUID,
+    created_at             TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT pk_itemcreationtrack PRIMARY KEY (item_id)
+);
+
 CREATE TABLE item_picture
 (
     id          UUID NOT NULL,
@@ -117,25 +176,36 @@ CREATE TABLE item_picture
     CONSTRAINT pk_itempicture PRIMARY KEY (id)
 );
 
-CREATE TABLE item_price_history
+CREATE TABLE price_calculation_history
 (
-    id            BIGINT  NOT NULL,
-    item_id       UUID    NOT NULL,
-    base_price    DECIMAL NOT NULL,
-    nominal_price DECIMAL NOT NULL,
-    last_update   TIMESTAMP WITHOUT TIME ZONE,
-    CONSTRAINT pk_itempricehistory PRIMARY KEY (id)
+    id               INTEGER                  NOT NULL,
+    transaction_id   UUID                     NOT NULL,
+    item_id          UUID                     NOT NULL,
+    base_price       DECIMAL(12, 2)           NOT NULL,
+    final_price      DECIMAL(12, 2)           NOT NULL,
+    discount_decimal DECIMAL(5, 4)            NOT NULL,
+    created_at       TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT pk_pricecalculationhistory PRIMARY KEY (id)
+);
+
+CREATE TABLE pricing_transaction_status
+(
+    transaction_id UUID                                   NOT NULL,
+    created_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    calculated_at  TIMESTAMP WITH TIME ZONE,
+    indexed_at     TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT pk_pricingtransactionstatus PRIMARY KEY (transaction_id)
 );
 
 CREATE TABLE product
 (
-    id          UUID         NOT NULL,
-    category_id UUID         NOT NULL,
-    brand       VARCHAR(255) NOT NULL,
-    name        VARCHAR(255) NOT NULL,
-    description TEXT         NOT NULL,
-    created_at  TIMESTAMP WITHOUT TIME ZONE,
-    updated_at  TIMESTAMP WITHOUT TIME ZONE,
+    id          UUID                     NOT NULL,
+    category_id UUID                     NOT NULL,
+    brand       VARCHAR(255)             NOT NULL,
+    name        VARCHAR(255)             NOT NULL,
+    description TEXT                     NOT NULL,
+    created_at  TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at  TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_product PRIMARY KEY (id)
 );
 
@@ -149,18 +219,18 @@ CREATE TABLE product_attribute
 
 CREATE TABLE saved_later_item
 (
-    id         UUID                        NOT NULL,
-    list_id    UUID                        NOT NULL,
-    item_id    UUID                        NOT NULL,
-    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    id         UUID                     NOT NULL,
+    list_id    UUID                     NOT NULL,
+    item_id    UUID                     NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_savedlateritem PRIMARY KEY (id)
 );
 
 CREATE TABLE saved_later_list
 (
-    id          UUID NOT NULL,
-    user_id     UUID NOT NULL,
-    last_update TIMESTAMP WITHOUT TIME ZONE,
+    id          UUID                     NOT NULL,
+    user_id     UUID                     NOT NULL,
+    last_update TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_savedlaterlist PRIMARY KEY (id)
 );
 
@@ -183,6 +253,15 @@ CREATE TABLE user_address
     CONSTRAINT pk_useraddress PRIMARY KEY (id)
 );
 
+CREATE TABLE user_credit
+(
+    id           BIGINT                      NOT NULL,
+    used_id      UUID                        NOT NULL,
+    balance      DECIMAL                     NOT NULL,
+    last_updated TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    CONSTRAINT pk_usercredit PRIMARY KEY (id)
+);
+
 CREATE TABLE user_info
 (
     uuid          UUID         NOT NULL,
@@ -200,21 +279,21 @@ CREATE TABLE user_info
 
 CREATE TABLE wish_item
 (
-    id           UUID NOT NULL,
-    wish_list_id UUID NOT NULL,
-    item_id      UUID NOT NULL,
-    last_update  TIMESTAMP WITHOUT TIME ZONE,
+    id           UUID                     NOT NULL,
+    wish_list_id UUID                     NOT NULL,
+    item_id      UUID                     NOT NULL,
+    last_update  TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_wishitem PRIMARY KEY (id)
 );
 
 CREATE TABLE wish_list
 (
-    id             UUID         NOT NULL,
-    user_id        UUID         NOT NULL,
-    tittle         VARCHAR(255) NOT NULL,
+    id             UUID                     NOT NULL,
+    user_id        UUID                     NOT NULL,
+    tittle         VARCHAR(255)             NOT NULL,
     description    TEXT,
-    principal_list BOOLEAN      NOT NULL,
-    last_update    TIMESTAMP WITHOUT TIME ZONE,
+    principal_list BOOLEAN                  NOT NULL,
+    last_update    TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_wishlist PRIMARY KEY (id)
 );
 
@@ -227,11 +306,17 @@ ALTER TABLE cart
 ALTER TABLE category
     ADD CONSTRAINT uc_category_name UNIQUE (name);
 
+ALTER TABLE invitation_trace
+    ADD CONSTRAINT uc_invitationtrace_invited_uuid UNIQUE (invited_uuid);
+
 ALTER TABLE item
     ADD CONSTRAINT uc_item_sku UNIQUE (sku);
 
 ALTER TABLE saved_later_list
     ADD CONSTRAINT uc_savedlaterlist_user UNIQUE (user_id);
+
+ALTER TABLE user_credit
+    ADD CONSTRAINT uc_usercredit_used UNIQUE (used_id);
 
 ALTER TABLE user_info
     ADD CONSTRAINT uc_userinfo_email UNIQUE (email);
@@ -242,9 +327,6 @@ ALTER TABLE wish_list
 ALTER TABLE cart_item
     ADD CONSTRAINT uk_cart_product UNIQUE (cart_id, variant_id);
 
-ALTER TABLE discount_target
-    ADD CONSTRAINT uk_discount_target_target_id UNIQUE (discount_id);
-
 ALTER TABLE saved_later_item
     ADD CONSTRAINT uk_saved_list_item UNIQUE (list_id, item_id);
 
@@ -254,9 +336,15 @@ ALTER TABLE wish_list
 ALTER TABLE wish_item
     ADD CONSTRAINT uk_with_list_product UNIQUE (wish_list_id, item_id);
 
+CREATE INDEX idx_discount_active ON discount (active);
+
 CREATE INDEX idx_discount_dates ON discount (start_date, end_date);
 
 CREATE INDEX idx_item_price ON item (base_price);
+
+CREATE INDEX idx_item_vissible ON item (visible);
+
+CREATE INDEX idx_price_calculation_history_transaction_id ON price_calculation_history (transaction_id);
 
 CREATE INDEX idx_product_created_at ON product (created_at DESC);
 
@@ -276,11 +364,23 @@ ALTER TABLE cart
 ALTER TABLE category
     ADD CONSTRAINT FK_CATEGORY_ON_PARENT FOREIGN KEY (parent_id) REFERENCES category (id);
 
+ALTER TABLE credit_transaction
+    ADD CONSTRAINT FK_CREDITTRANSACTION_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
+
+ALTER TABLE cupon
+    ADD CONSTRAINT FK_CUPON_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
+
 ALTER TABLE discount_target
     ADD CONSTRAINT FK_DISCOUNTTARGET_ON_DISCOUNT FOREIGN KEY (discount_id) REFERENCES discount (id);
 
 ALTER TABLE inventory_trace
     ADD CONSTRAINT FK_INVENTORYTRACE_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
+
+ALTER TABLE invitation_trace
+    ADD CONSTRAINT FK_INVITATIONTRACE_ON_INVITED_UUID FOREIGN KEY (invited_uuid) REFERENCES user_info (uuid);
+
+ALTER TABLE invitation_trace
+    ADD CONSTRAINT FK_INVITATIONTRACE_ON_INVITING FOREIGN KEY (inviting_id) REFERENCES user_info (uuid);
 
 ALTER TABLE item_attribute
     ADD CONSTRAINT FK_ITEMATTRIBUTE_ON_ATTRIBUTE FOREIGN KEY (attribute_id) REFERENCES product_attribute (id);
@@ -288,16 +388,24 @@ ALTER TABLE item_attribute
 ALTER TABLE item_attribute
     ADD CONSTRAINT FK_ITEMATTRIBUTE_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
 
+ALTER TABLE item_base_price_change_track
+    ADD CONSTRAINT FK_ITEMBASEPRICECHANGETRACK_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
+
+CREATE INDEX idx_item_base_price_change_track_item_id ON item_base_price_change_track (item_id);
+
+ALTER TABLE item_creation_track
+    ADD CONSTRAINT FK_ITEMCREATIONTRACK_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
+
 ALTER TABLE item_picture
     ADD CONSTRAINT FK_ITEMPICTURE_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
-
-ALTER TABLE item_price_history
-    ADD CONSTRAINT FK_ITEMPRICEHISTORY_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
 
 ALTER TABLE item
     ADD CONSTRAINT FK_ITEM_ON_PRODUCT FOREIGN KEY (product_id) REFERENCES product (id);
 
 CREATE INDEX idx_item_product ON item (product_id);
+
+ALTER TABLE price_calculation_history
+    ADD CONSTRAINT FK_PRICECALCULATIONHISTORY_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
 
 ALTER TABLE product_attribute
     ADD CONSTRAINT FK_PRODUCTATTRIBUTE_ON_PRODUCT FOREIGN KEY (product_id) REFERENCES product (id);
@@ -318,6 +426,9 @@ ALTER TABLE saved_later_list
 
 ALTER TABLE user_address
     ADD CONSTRAINT FK_USERADDRESS_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
+
+ALTER TABLE user_credit
+    ADD CONSTRAINT FK_USERCREDIT_ON_USED FOREIGN KEY (used_id) REFERENCES user_info (uuid);
 
 ALTER TABLE wish_item
     ADD CONSTRAINT FK_WISHITEM_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);

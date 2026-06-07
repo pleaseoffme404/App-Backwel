@@ -1,0 +1,15 @@
+package com.backwell.api_service.modules.products.service;
+
+import com.backwell.api_service.modules.products.controller.res.ItemDTO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Deprecated
+public class ItemDTOAssembler {
+    private final ItemService itemService;
+
+}

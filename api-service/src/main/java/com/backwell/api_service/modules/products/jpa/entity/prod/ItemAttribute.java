@@ -1,10 +1,7 @@
 package com.backwell.api_service.modules.products.jpa.entity.prod;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -19,6 +16,7 @@ import java.util.UUID;
                 columnNames = {"item_id", "attribute_id"}
         )
 )
+@Builder
 public class ItemAttribute {
     @Id
     private UUID id;
@@ -45,5 +43,12 @@ public class ItemAttribute {
         if (obj == null || getClass() != obj.getClass()) return false;
         ItemAttribute that = (ItemAttribute) obj;
         return Objects.equals(id, that.id) && Objects.equals(value, that.value);
+    }
+
+    public UUID getKeyId() {
+        return attribute.getId();
+    }
+    public String getKey(){
+        return attribute.getKey();
     }
 }

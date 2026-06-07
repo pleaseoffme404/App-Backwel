@@ -12,10 +12,16 @@ public class UUIDService {
 
     private final TimeBasedEpochGenerator generator;
 
+    /**
+     * Returns a time-based epoch UUID Object
+     * */
     public UUID next() {
         return generator.generate();
     }
 
+    /**
+     * Returns a time-based epoch UUID Object
+     * */
     public String nextString(){
         return generator.generate().toString();
     }

@@ -12,6 +12,11 @@ import java.util.UUID;
 @Builder
 @Setter
 @Getter
+@Table(
+        indexes = {
+                @Index(name = "idx_product_attribute_porudtc_id", columnList = "product_id")
+        }
+)
 public class ProductAttribute {
     @Id
     @Setter(AccessLevel.NONE)

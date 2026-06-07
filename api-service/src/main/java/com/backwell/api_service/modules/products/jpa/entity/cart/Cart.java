@@ -9,7 +9,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
 
+import java.sql.Types;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +24,7 @@ import static com.backwell.api_service.common.exception.codes.ProductErrorCode.*
 @NoArgsConstructor
 @Getter
 @NamedEntityGraph(
-        name = "Cart.withItemsAndVariants",
+        name = "Cart.withContentAndItems",
         attributeNodes = {
                 @NamedAttributeNode(value = "cartItems", subgraph = "cartItems-subgraph")
         },
@@ -31,6 +33,27 @@ import static com.backwell.api_service.common.exception.codes.ProductErrorCode.*
                         name = "cartItems-subgraph",
                         attributeNodes = {
                                 @NamedAttributeNode(value = "item")
+                        }
+                )
+        }
+)
+@NamedEntityGraph(
+        name = "Cart.fetchDetailsForAuditing",
+        attributeNodes = {
+                @NamedAttributeNode("userInfo"),
+                @NamedAttributeNode(value = "cartItems", subgraph = "subgraph.cartItems")
+        },
+        subgraphs = {
+                @NamedSubgraph(
+                        name = "subgraph.cartItems",
+                        attributeNodes = {
+                                @NamedAttributeNode(value = "item", subgraph = "subgraph.item")
+                        }
+                ),
+                @NamedSubgraph(
+                        name = "subgraph.item",
+                        attributeNodes = {
+                                @NamedAttributeNode("product")
                         }
                 )
         }
@@ -50,6 +73,8 @@ public class Cart {
     )
     private List<CartItem> cartItems = new ArrayList<>();
 
+    @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant lastUpdate;
 
 

@@ -5,7 +5,6 @@ import com.backwell.api_service.common.exception.YouAreAnIdiotException;
 import com.backwell.api_service.modules.users.dto.CreateAddressDTO;
 import com.backwell.api_service.modules.users.dto.UpdateAddressRequest;
 import com.backwell.api_service.modules.users.dto.UserAddressDTO;
-import com.backwell.api_service.modules.users.entity.UserAddress;
 import com.backwell.api_service.modules.users.service.UserAddressService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
