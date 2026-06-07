@@ -19,7 +19,7 @@ public interface DiscountRepository extends
 SELECT d
 FROM Discount d
 WHERE d.id = :discountId
-AND d.endDate > NOW()""")
+AND d.endDate > CURRENT_TIMESTAMP""")
     Optional<Discount> getIfUpdatable(@Param("discountId") UUID discountId);
 
 
