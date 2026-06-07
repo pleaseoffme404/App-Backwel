@@ -42,10 +42,11 @@
 
 <!--		Common library for backwell-->
 		<dependency>
-			<groupId>com.github.JJ-Sinklaire</groupId>
-			<artifactId>backwell-lib</artifactId>
-			<version>v1.0.1</version>
+			<groupId>com.github.J-Sinclaire</groupId>
+			<artifactId>backwel-libraries</artifactId>
+			<version>-ce0ff5defa-1</version>
 		</dependency>
+
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

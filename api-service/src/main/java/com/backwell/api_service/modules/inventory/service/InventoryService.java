@@ -45,7 +45,6 @@ public class InventoryService {
 
         List<InventoryTrace> saved = inventoryTraceRepository.saveAllAndFlush(traces);
 
-        // fuck you nigga :)
         saved.forEach(cacheManager::saveInitialInventory);
     }
 

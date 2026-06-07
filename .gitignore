@@ -15,6 +15,7 @@ buildNumber.properties
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+.idea
 .env
 node_modules/
 auth-server/src/main/resources/*.der
