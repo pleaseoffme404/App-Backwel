@@ -25,6 +25,15 @@
   --accent: #E85D04;
   --text-primary: #1A202C;
 }
+#preview-container, body {
+  --radius-global: 0.5rem;
+  --font-family-global: 'Inter', sans-serif;
+  font-family: var(--font-family-global) !important;
+}
+
+#preview-container *:not(.rounded-full), body *:not(.rounded-full) {
+  border-radius: var(--radius-global) !important;
+}
 /* From Uiverse.io by andrew-demchenk0 */ 
 .switch {
   font-size: 17px;

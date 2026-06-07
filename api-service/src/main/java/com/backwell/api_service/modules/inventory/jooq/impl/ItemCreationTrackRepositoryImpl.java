@@ -15,7 +15,7 @@ import static com.backwell.api_service.jooq.generated.Tables.*;
 
 @Repository
 @RequiredArgsConstructor
-public class ItemCreationTrackImpl implements ItemCreationTrackCustomRepository {
+public class ItemCreationTrackRepositoryImpl implements ItemCreationTrackCustomRepository {
     private final Supplier<OffsetDateTime> offsetDateTimeSupplier;
     private final DSLContext c;
 

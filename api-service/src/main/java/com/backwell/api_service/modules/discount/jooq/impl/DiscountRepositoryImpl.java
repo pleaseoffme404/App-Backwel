@@ -26,13 +26,11 @@ import static com.backwell.api_service.common.exception.codes.DiscountErrorCode.
 @Repository
 @RequiredArgsConstructor
 @Slf4j
-public class DiscountCustomRepositoryImpl implements DiscountCustomRepository {
+public class DiscountRepositoryImpl implements DiscountCustomRepository {
     private final DSLContext dsl;
     private final Supplier<OffsetDateTime> utcNowSupplier;
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
-
-    // fokiu bithches
     @Override
     public CategoryDiscountExtract resolveDiscountForCategory(UUID[] categoryPath) {
         String sql = "SELECT fn_process_category_discount(:categoryPath)";
