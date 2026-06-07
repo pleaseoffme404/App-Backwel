@@ -18,26 +18,30 @@ export async function triggerEmailWebhook(templateId, customerName, orderId, add
     const timestamp = Date.now().toString();
     const payloadString = JSON.stringify(payload);
 
+    const dataToSign = timestamp + payloadString;
+
+
     const signature = crypto
         .createHmac('sha256', config.serviceSecret)
-        .update(payloadString)
+        .update(dataToSign)
         .digest('hex');
 
-    console.log("--- DEBUG WEBHOOK ---");
-    console.log("Secret enviado:", config.serviceSecret ? "OK" : "NO DEFINIDO");
+    //console.log("--- DEBUG WEBHOOK ---");
+    //console.log("Secret enviado:", config.serviceSecret ? "OK" : "NO DEFINIDO");
     try {
         console.log(`[Webhook] Enviando evento '${templateId}' para el pedido ${orderId}...`);
-        await axios.post(config.emailServiceUrl, payload, {
+        const response = await axios.post(config.emailServiceUrl, payload, {
             headers: {
                 'Content-Type': 'application/json',
-                'x-hmac-signature': `sha256=${signature}`,
-                'x-timestamp':timestamp
+                'x-hmac-signature': signature,
+                'x-timestamp':timestamp,
+                'x-service-secret': config.serviceSecret
             }
         });
         console.log(`[Webhook] Notificación aceptada por el servicio de correo: ${response.status}`);
     } catch (error) {
         if (error.response) {
-            // El servidor de correos respondió, pero con un error (Ej. 401 Unauthorized o 400 Bad Request)
+
             console.error(`[Error Webhook] Rechazado por el servidor de correos (Status ${error.response.status}):`, error.response.data);
         } else {
             // Fallo de red: Node.js no encuentra el servidor (Ej. ECONNREFUSED)

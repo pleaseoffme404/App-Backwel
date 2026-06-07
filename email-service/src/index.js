@@ -4,10 +4,6 @@ import { authMiddleware } from './middlewares/auth.js';
 import routes from './api/routes.js';
 import { verifyConnection } from './services/mailer.js';
 
-console.log("--- CONFIGURACIÓN EMAIL-SERVICE ---");
-console.log("Secret definido en memoria:", process.env.SERVICE_EMAIL_SECRET ? "OK" : "NO DEFINIDO");
-// OJO: Imprime solo los primeros 3 caracteres para no exponer tu clave completa en los logs
-console.log("Primeros 3 caracteres del secret:", process.env.SERVICE_EMAIL_SECRET?.substring(0, 3));
 const app = express();
 
 app.use(express.json());
