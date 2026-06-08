@@ -1,48 +1,51 @@
 package com.backwell.api_service.modules.users.dto;
 
 import com.backwell.api_service.modules.users.entity.address.GoogleAddress;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 
 public record GoogleAddressDTO(
-        @Size(max = 512)
-        @NotNull
+        @NotBlank(message = "Google Place ID is required.")
+        @Size(max = 512, message = "Place ID cannot exceed {max} characters.")
         String placeId,
 
-        @Size(max = 1000)
-        @NotNull
+        @NotBlank(message = "Formatted address is required.")
+        @Size(max = 1000, message = "Formatted address cannot exceed {max} characters.")
         String formattedAddress,
 
-        @Size(max = 100)
-        @NotNull
+        @NotBlank(message = "Street number is required.")
+        @Size(max = 100, message = "Street number cannot exceed {max} characters.")
         String streetNumber,
 
-        @Size(max = 100)
-        @NotNull
+        @NotBlank(message = "Route/Street name is required.")
+        @Size(max = 100, message = "Route cannot exceed {max} characters.")
         String route,
 
-        @Size(max = 100)
-        @NotNull
+        @NotBlank(message = "Locality/City is required.")
+        @Size(max = 100, message = "Locality cannot exceed {max} characters.")
         String locality,
 
-        @NotNull
-        @Size(max = 100)
+        @NotBlank(message = "Administrative area level 1 (State/Province) is required.")
+        @Size(max = 100, message = "Administrative area level 1 cannot exceed {max} characters.")
         String administrativeAreaLevel1,
 
-        @NotNull
-        @Size(max = 10)
+        @NotBlank(message = "Postal code is required.")
+        @Size(max = 10, message = "Postal code cannot exceed {max} characters.")
         String postalCode,
 
-        @NotNull
-        @Size(max = 100)
+        @NotBlank(message = "Country code is required.")
+        @Size(max = 100, message = "Country code cannot exceed {max} characters.")
         String countryCode,
 
-        @NotNull
+        @NotNull(message = "Latitude is required.")
+        @DecimalMin(value = "-90.0", message = "Latitude must be greater than or equal to -90.0.")
+        @DecimalMax(value = "90.0", message = "Latitude must be less than or equal to 90.0.")
         BigDecimal latitude,
 
-        @NotNull
+        @NotNull(message = "Longitude is required.")
+        @DecimalMin(value = "-180.0", message = "Longitude must be greater than or equal to -180.0.")
+        @DecimalMax(value = "180.0", message = "Longitude must be less than or equal to 180.0.")
         BigDecimal longitude
 ) {
 
