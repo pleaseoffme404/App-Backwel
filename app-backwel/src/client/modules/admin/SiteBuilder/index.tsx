@@ -28,11 +28,28 @@ const {
     createSavepoint, restoreSavepoint
   } = usePageConfig();
 
+  const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
+  const hasChanges = !!draftConfig;
+
   useEffect(() => {
     if (!isSessionLoading && !session?.active) {
       window.location.href = 'http://localhost:8080/login';
     }
   }, [session, isSessionLoading]);
+
+  useEffect(() => {
+    const fontName = activeConfig.theme?.font_family;
+    if (fontName) {
+      let link = document.getElementById('dynamic-google-font') as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = 'dynamic-google-font';
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@300;400;500;700;900&display=swap`;
+    }
+  }, [activeConfig.theme?.font_family]);
 
   if (isSessionLoading || isConfigLoading) {
     return (
@@ -41,9 +58,6 @@ const {
       </div>
     );
   }
-
-const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
-  const hasChanges = !!draftConfig;
 
   const handlePublish = async () => {
     const success = await publishChanges();
@@ -198,7 +212,7 @@ const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
     );
   }
 
-  return (
+return (
     <div className="flex h-screen w-full bg-bg-primary overflow-hidden font-sans">
       
       {}
@@ -211,6 +225,8 @@ const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
             --brand-secondary: ${activeConfig.theme?.[`${theme}_brand_secondary`] || defaultColors[`${theme}_brand_secondary` as keyof typeof defaultColors]};
             --accent: ${activeConfig.theme?.[`${theme}_accent`] || defaultColors[`${theme}_accent` as keyof typeof defaultColors]};
             --text-primary: ${activeConfig.theme?.[`${theme}_text_primary`] || defaultColors[`${theme}_text_primary` as keyof typeof defaultColors]};
+            --radius-global: ${activeConfig.theme?.border_radius !== undefined ? `${activeConfig.theme.border_radius}px` : '8px'};
+            --font-family-global: ${activeConfig.theme?.font_family ? `"${activeConfig.theme.font_family}", sans-serif` : "'Inter', sans-serif"};
           }
         `}
       </style>
@@ -343,6 +359,7 @@ const activeConfig: Record<string, any> = draftConfig || publishedConfig || {};
 
               <section>
                 <h2 className="text-xl font-black text-brand-primary mb-6 flex items-center gap-2"><span className="w-8 h-px bg-brand-primary/30"></span> Estructura Global</h2>
+                {renderInput('theme', 'enable_splash', 'Animación de Inicio (Splash)', 'checkbox')}
                 {renderInput('theme', 'border_radius', 'Redondez de Contenedores', 'range')}
                 {renderInput('theme', 'font_family', 'Tipografía Global', 'select', [
                   { value: 'Inter, sans-serif', label: 'Inter (Moderna)' },

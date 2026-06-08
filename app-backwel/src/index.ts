@@ -8,72 +8,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = (process.env.PORT || 3000) as number;
 
-const apiGatewayUrl = process.env.API_GATEWAY_URL || 'http://localhost:8080';
-
-app.get('/api/v1/user/userinfo', (req, res) => {
-  console.log(`[MOCK] Bypass Java 500 Error -> Entregando perfil ADMIN falso`);
-  res.json({
-    id: "00000000-0000-0000-0000-000000000000",
-    email: "admin@local.dev",
-    role: "OWNER",
-    name: "Admin",
-    surname: "Temporal",
-    phoneNumber: "0000000000",
-    pictureUrl: "",
-    countryCode: "MX",
-    currencyCode: "MXN"
-  });
-});
-
-app.post('/api/v1/user/complete-account', (req, res) => {
-  console.log(`[MOCK] Bypass Java 403 Error -> Simulando creación de cuenta`);
-  res.json({
-    id: "00000000-0000-0000-0000-000000000000",
-    email: "admin@local.dev",
-    role: "OWNER",
-    name: "Admin",
-    surname: "Temporal"
-  });
-});
-app.get('/api/v1/catalog/products', (req, res) => {
-  console.log(`[MOCK] Bypass de Java -> Entregando catálogo POS`);
-  res.json([
-    { id: 'p1', name: 'Cable UTP Cat 6', price: 15.00, stock: 150, image: '' },
-    { id: 'p2', name: 'Switch Gigabit 8 Puertos', price: 450.00, stock: 0, image: '' },
-    { id: 'p3', name: 'Router WiFi 6', price: 1200.00, stock: 12, image: '' },
-    { id: 'p4', name: 'Patch Panel 24 Puertos', price: 850.00, stock: 5, image: '' },
-    { id: 'p5', name: 'Gabinete Rack 12U', price: 3200.00, stock: 2, image: '' },
-    { id: 'p6', name: 'Bobina Fibra Óptica 1000m', price: 4500.00, stock: 4, image: '' },
-    { id: 'p7', name: 'Conectores RJ45 (Caja 100)', price: 120.00, stock: 30, image: '' },
-    { id: 'p8', name: 'Cámara IP Domo PTZ', price: 1800.00, stock: 8, image: '' }
-  ]);
-});
-
-app.post('/api/v1/auth/unlock', express.json(), (req, res) => {
-  console.log(`[MOCK] Verificando contraseña para desbloquear Admin`);
-  const { password } = req.body;
-  // Contraseña temporal por defecto para el mock
-  if (password === 'admin123') {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ error: 'invalid_password' });
-  }
-});
+const apiGatewayUrl = (process.env.API_GATEWAY_URL || 'http://localhost:8080') as string;
 
 app.use(
   '/api/v1',
   createProxyMiddleware({
     target: apiGatewayUrl,
     changeOrigin: true,
-    pathRewrite: (path, req) => (req as any).originalUrl,
+   pathRewrite: (path, req) => (req as any).originalUrl,
     on: {
       proxyReq: (proxyReq, req) => {
-        console.log(`[PROXY REQ] ${req.method} ${(req as any).originalUrl} -> ${apiGatewayUrl}${proxyReq.path}`);
+        console.log(`\n--- [DEBUG PROXY REQ START] ---`);
+        console.log(`[REQ] ${req.method} ${(req as any).originalUrl} -> ${apiGatewayUrl}${proxyReq.path}`);
+        
+        const cookies = req.headers.cookie;
+        console.log(`[REQ COOKIES IN]:`, cookies ? cookies : 'None');
+        
+        if (cookies && req.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+          const xsrfCookie = cookies.split(';').find(c => c.trim().startsWith('XSRF-TOKEN='));
+          if (xsrfCookie) {
+            const tokenValue = xsrfCookie.split('=')[1].trim();
+            proxyReq.setHeader('X-XSRF-TOKEN', tokenValue);
+            console.log(`[REQ CSRF INJECTED]:`, tokenValue.substring(0, 10) + '...');
+          } else {
+            console.log(`[REQ CSRF MISSING]: No se encontró XSRF-TOKEN en las cookies.`);
+          }
+        }
+        
+        console.log(`[REQ HEADERS OUT]:`, proxyReq.getHeaders());
+        console.log(`--- [DEBUG PROXY REQ END] ---\n`);
       },
       proxyRes: (proxyRes, req) => {
-        console.log(`[PROXY RES] ${req.method} ${(req as any).originalUrl} | Status: ${proxyRes.statusCode}`);
+        console.log(`\n--- [DEBUG PROXY RES START] ---`);
+        console.log(`[RES] ${req.method} ${(req as any).originalUrl} | Status: ${proxyRes.statusCode}`);
+        console.log(`[RES HEADERS]:`, proxyRes.headers);
+        console.log(`--- [DEBUG PROXY RES END] ---\n`);
       },
       error: (err, req, res) => {
         console.error(`[PROXY ERR] ${req.method} ${(req as any).originalUrl} | Error:`, err.message);
