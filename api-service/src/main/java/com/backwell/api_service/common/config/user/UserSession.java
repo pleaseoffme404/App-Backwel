@@ -22,8 +22,27 @@ public record UserSession (
     public static UserSession fromJwt(Jwt jwt) {
         log.info("[DEBUG JWT] Full claims map payload: {}", jwt.getClaims());
 
-        String userIdStr = jwt.getClaimAsString(USER_UUID.key());
-        UUID uuid = userIdStr != null ? UUID.fromString(userIdStr) : null;
+        String uuidStr = jwt.getClaimAsString(USER_UUID.key());
+        UUID uuid = null;
+
+        if (uuidStr != null) {
+            try {
+                uuid = UUID.fromString(uuidStr);
+            }  catch (IllegalArgumentException e) {
+                log.warn("[DEBUG JWT] Invalid USER_UUID claim: {}", uuidStr);
+            }
+        }
+
+        if (uuid == null) {
+            String idStr = jwt.getClaimAsString(USER_ID.key());
+            if (idStr != null) {
+                try {
+                    uuid = UUID.fromString(idStr);
+                } catch (IllegalArgumentException e) {
+                    log.warn("[DEBUG JWT] Invalid USER_ID claim: {}", idStr);
+                }
+            }
+        }
 
         String email = jwt.getClaimAsString(EMAIL.key());
 

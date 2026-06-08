@@ -9,6 +9,7 @@ import java.util.Optional;
 
 @Component
 public class UserSessionProvider {
+
     public UserSession getCurrentUserSession() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {

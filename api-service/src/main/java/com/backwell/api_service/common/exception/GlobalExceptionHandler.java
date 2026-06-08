@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,6 +21,7 @@ import java.util.UUID;
 
 @RestControllerAdvice
 @RequiredArgsConstructor
+@Slf4j
 public class GlobalExceptionHandler {
     private final ErrorLogService errorLogService;
     private final UUIDService uuidService;
@@ -27,9 +29,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach((f) -> {
-            errors.put(f.getField(), f.getDefaultMessage());
-        });
+        ex.getBindingResult().getFieldErrors().forEach(f -> errors.put(f.getField(), f.getDefaultMessage()));
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
         UUID traceId = uuidService.next();
@@ -60,6 +60,7 @@ public class GlobalExceptionHandler {
                 .build();
 
         errorLogService.saveErrorLog(traceId, request, ex);
+
         return ResponseEntity.badRequest().body(response);
     }
 
@@ -100,6 +101,7 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
+
         errorLogService.saveErrorLog(traceId, request, ex);
         return ResponseEntity.status(ex.getHttpStatus()).body(response);
     }
@@ -114,6 +116,7 @@ public class GlobalExceptionHandler {
                 .message("Something went wrong with our servers. Please try cocks again")
                 .path(request.getRequestURI())
                 .build();
+
         errorLogService.saveErrorLog(traceId, request, ex);
         return ResponseEntity.internalServerError().body(response);
     }
@@ -130,6 +133,7 @@ public class GlobalExceptionHandler {
                 .message("Unexpected Error Occurred. Contact Support for further information for log with trace: %s".formatted(traceId))
                 .path(request.getRequestURI())
                 .build();
+
         errorLogService.saveErrorLog(traceId, request, ex);
         return ResponseEntity.internalServerError().body(response);
     }
