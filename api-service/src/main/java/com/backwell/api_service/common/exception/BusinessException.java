@@ -9,6 +9,6 @@ public class BusinessException extends BaseException {
     }
 
     public BusinessException(String message, ErrorCodeEnum errorCode) {
-        super (message, errorCode.getMessage(), HttpStatus.BAD_REQUEST);
+        super (message, errorCode.getMessage(), errorCode.getHttpStatus());
     }
 }

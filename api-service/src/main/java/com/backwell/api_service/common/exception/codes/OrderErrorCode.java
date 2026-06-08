@@ -1,32 +1,30 @@
 package com.backwell.api_service.common.exception.codes;
 
 import org.springframework.http.HttpStatus;
-import static  org.springframework.http.HttpStatus.*;
+import static org.springframework.http.HttpStatus.*;
 
-public enum ItemErrorCode  implements ErrorCodeEnum {
-    ITEM_NOT_FOUND(NOT_FOUND),
-    CREATION_ATTRIBUTES_MISMATCH(CONFLICT),
+public enum OrderErrorCode implements ErrorCodeEnum {
+    CART_ITEMS_CONFLICT(CONFLICT),
+    EMPTY_CART(UNPROCESSABLE_ENTITY),
     ;
 
     private final HttpStatus httpStatus;
 
-    ItemErrorCode() {
+    OrderErrorCode(){
         this.httpStatus = BAD_REQUEST;
     }
-    ItemErrorCode(HttpStatus httpStatus) {
+
+    OrderErrorCode(HttpStatus httpStatus) {
         this.httpStatus = httpStatus;
     }
-
-
     @Override
     public String getMessage() {
-        return this.name().replace("_", " ");
+        return "";
     }
 
     @Override
     public HttpStatus getHttpStatus() {
-        return this.httpStatus;
+        return ErrorCodeEnum.super.getHttpStatus();
     }
-
 
 }
