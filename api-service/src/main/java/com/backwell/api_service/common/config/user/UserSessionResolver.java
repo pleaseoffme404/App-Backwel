@@ -2,6 +2,7 @@ package com.backwell.api_service.common.config.user;
 
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -11,6 +12,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 
 @AllArgsConstructor
+@Slf4j
 public class UserSessionResolver implements HandlerMethodArgumentResolver {
     private final UserSessionProvider userSessionProvider;
 
@@ -27,6 +29,12 @@ public class UserSessionResolver implements HandlerMethodArgumentResolver {
             NativeWebRequest webRequest,
             @Nullable WebDataBinderFactory binderFactory
     ) throws Exception {
-        return userSessionProvider.getCurrentUserSession();
+        try {
+            return userSessionProvider.getCurrentUserSession();
+        } catch (Exception e) {
+            log.error("Fatal error while resolving user session.");
+            log.error(e.getMessage(), e);
+            throw e;
+        }
     }
 }

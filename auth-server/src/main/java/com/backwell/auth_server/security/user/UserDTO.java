@@ -2,11 +2,13 @@ package com.backwell.auth_server.security.user;
 
 import com.backwell.auth_server.jpa.entity.User;
 import com.backwell.enums.AuthProvider;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 public record UserDTO(
         UUID uuid,
         String email,
