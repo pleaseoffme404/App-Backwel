@@ -22,7 +22,7 @@ public record UserSession (
     public static UserSession fromJwt(Jwt jwt) {
         log.info("[DEBUG JWT] Full claims map payload: {}", jwt.getClaims());
 
-        String userIdStr = jwt.getClaimAsString(USER_ID.key());
+        String userIdStr = jwt.getClaimAsString(USER_UUID.key());
         UUID uuid = userIdStr != null ? UUID.fromString(userIdStr) : null;
 
         String email = jwt.getClaimAsString(EMAIL.key());

@@ -101,7 +101,7 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         errorLogService.saveErrorLog(traceId, request, ex);
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.status(ex.getHttpStatus()).body(response);
     }
 
     @ExceptionHandler(SystemException.class)
