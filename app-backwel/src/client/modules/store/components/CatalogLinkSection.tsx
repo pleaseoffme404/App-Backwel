@@ -45,9 +45,9 @@ export function CatalogLinkSection({ config, isLoading }: CatalogLinkSectionProp
             {bannerText}
           </h2>
           <Link 
-            to="/pos" 
-            className="bg-accent text-white px-12 py-5 rounded-xl text-xl font-bold uppercase tracking-wider hover:bg-white hover:text-accent transition-colors active:scale-95 shadow-xl"
-          >
+          to="/store" 
+          className="mt-4 px-8 py-4 bg-brand-primary text-bg-primary font-bold rounded-xl text-lg hover:opacity-90 transition-opacity shadow-lg shadow-brand-primary/20"
+        >
             {buttonText}
           </Link>
         </div>
