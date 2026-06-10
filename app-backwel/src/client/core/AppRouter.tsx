@@ -11,6 +11,7 @@ import Login from '../modules/auth/index';
 import AuthCallback from '../modules/auth/Callback';
 import StoreCatalog from '../modules/store/Catalog/index';
 import { NotFound } from '../shared/ui/NotFound';
+import ConfiguracionAdmin from '../modules/admin/Configuration/index';
 
 export function AppRouter() {
   return (
@@ -28,6 +29,7 @@ export function AppRouter() {
           <Route path="site-builder" element={<SiteBuilder />} />
           <Route path="productos" element={<ProductosAdmin />} />
           <Route path="usuarios" element={<UsuariosAdmin />} />
+          <Route path="configuracion" element={<ConfiguracionAdmin />} />
           <Route path="*" element={<NotFound />} />
         </Route>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import Swal from 'sweetalert2';
 
 export type PageConfigSection = Record<string, any>;
 export type PageConfig = Record<string, PageConfigSection>;
@@ -92,7 +93,14 @@ export function usePageConfig() {
   const createSavepoint = useCallback(() => {
     const current = draftConfig || publishedConfig || {};
     localStorage.setItem('backwel_savepoint', JSON.stringify(current));
-    alert('Savepoint creado con éxito.');
+    Swal.fire({
+      icon: 'success',
+      title: 'Savepoint Creado',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000
+    });
   }, [draftConfig, publishedConfig]);
 
   const restoreSavepoint = useCallback(() => {
@@ -102,8 +110,21 @@ export function usePageConfig() {
       setHistory((h) => [...h, draftConfig || publishedConfig || {}]);
       setDraftConfig(parsed);
       localStorage.setItem('backwel_draft_config', saved);
+      Swal.fire({
+        icon: 'success',
+        title: 'Savepoint Restaurado',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000
+      });
     } else {
-      alert('No hay ningún savepoint guardado.');
+      Swal.fire({
+        icon: 'info',
+        title: 'Vacio',
+        text: 'No hay ningun savepoint guardado en memoria.',
+        confirmButtonColor: '#38BDF8'
+      });
     }
   }, [draftConfig, publishedConfig]);
   return {

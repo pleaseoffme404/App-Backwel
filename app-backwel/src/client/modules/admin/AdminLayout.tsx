@@ -3,10 +3,13 @@ import { useSession } from '../../shared/hooks/useSession';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { useState, useEffect } from 'react';
 import defaultAvatar from '../../shared/assets/avatar-default.png';
+import { useBusiness } from '../../shared/hooks/useBusiness';
 
 export default function AdminLayout() {
   const { session, isLoading } = useSession();
-  const { theme, toggleTheme } = useTheme();
+const { theme, toggleTheme } = useTheme();
+  const { business } = useBusiness();
+  const bName = business?.businessName || business?.business_name;
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLocked, setIsLocked] = useState(localStorage.getItem('backwel_admin_locked') === 'true');
@@ -131,7 +134,7 @@ const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?
           </NavLink>
         </nav>
         
-        <div className="p-4 border-t border-text-primary/10 flex flex-col items-center">
+        <div className="p-4 border-t border-text-primary/10 flex flex-col items-center gap-2">
           <button 
             onClick={toggleTheme}
             className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-bg-primary text-text-primary/70 hover:text-brand-primary transition-colors"
@@ -144,6 +147,17 @@ const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?
             )}
             {!isCollapsed && <span className="ml-3 font-medium">Tema {theme === 'dark' ? 'Oscuro' : 'Claro'}</span>}
           </button>
+
+          <button 
+            onClick={() => {
+              window.location.href = 'http://localhost:8080/logout';
+            }}
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-red-500/10 text-text-primary/70 hover:text-red-500 transition-colors"
+            title="Cerrar Sesión"
+          >
+            <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            {!isCollapsed && <span className="ml-3 font-medium">Cerrar Sesión</span>}
+          </button>
         </div>
       </aside>
       
@@ -152,7 +166,7 @@ const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?
           <Outlet />
         </div>
         <footer className="mt-8 pt-4 border-t border-text-primary/10 text-center text-xs opacity-50 font-medium shrink-0">
-          Backwel Software Solutions &copy; {new Date().getFullYear()}
+          {bName || 'Backwel Software Solutions'} &copy; {new Date().getFullYear()}
         </footer>
       </main>
     </div>

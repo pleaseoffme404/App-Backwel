@@ -20,9 +20,8 @@ app.post('/api/v1/auth/unlock', express.json(), (req, res) => {
     res.status(401).json({ error: 'invalid_password' });
   }
 });
-
 app.use(
-  '/api/v1',
+  ['/api/v1', '/auth/register', '/auth/api/v1'],
   createProxyMiddleware({
     target: apiGatewayUrl,
     changeOrigin: true,
