@@ -40,6 +40,7 @@ public class Item {
             fetch = FetchType.LAZY,
             orphanRemoval = true
     )
+    @Builder.Default
     private Set<ItemAttribute> attributes = new HashSet<>();
 
     @OneToMany(
@@ -49,6 +50,7 @@ public class Item {
             orphanRemoval = true
     )
     @OrderBy("order ASC")
+    @Builder.Default
     private List<ItemPicture> pictures = new ArrayList<>();
 
 
