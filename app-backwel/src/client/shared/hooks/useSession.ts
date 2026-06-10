@@ -34,12 +34,28 @@ export function useSession() {
                 surname: "System",
                 phoneNumber: "0000000000",
                 countryCode: "MX",
-                currencyCode: "MXN"
+                currencyCode: "MXN",
+                addressName: "Principal",
+                firstAddress: {
+                  addressName: "Principal",
+                  slotIndex: 0,
+                  googleAddressDTO: {
+                    placeId: "dummy_place_id",
+                    formattedAddress: "Av. Principal 123",
+                    streetNumber: "123",
+                    route: "Av. Principal",
+                    locality: "CDMX",
+                    administrativeAreaLevel1: "CDMX",
+                    postalCode: "00000",
+                    countryCode: "MX",
+                    latitude: 19.4326,
+                    longitude: -99.1332
+                  }
+                }
               })
             });
             
             if (setupRes.ok) return setupRes.json();
-            
             const retryRes = await fetch('/api/v1/user/userinfo');
             if (retryRes.ok) return retryRes.json();
             

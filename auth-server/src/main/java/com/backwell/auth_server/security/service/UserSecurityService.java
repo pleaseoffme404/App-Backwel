@@ -38,7 +38,7 @@ public class UserSecurityService extends OidcUserService implements UserDetailsS
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user;
-
+        System.err.println("Fetching User Details form DataBase");
         try {
             UUID uuid = UUID.fromString(username);
             log.info("loadUserByUsername uuid:{}", uuid);

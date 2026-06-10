@@ -1,12 +1,15 @@
-import { Outlet, NavLink, useLocation, Link } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, Link, Navigate } from 'react-router-dom';
 import { useSession } from '../../shared/hooks/useSession';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { useState, useEffect } from 'react';
 import defaultAvatar from '../../shared/assets/avatar-default.png';
+import { useBusiness } from '../../shared/hooks/useBusiness';
 
 export default function AdminLayout() {
   const { session, isLoading } = useSession();
-  const { theme, toggleTheme } = useTheme();
+const { theme, toggleTheme } = useTheme();
+  const { business } = useBusiness();
+  const bName = business?.businessName || business?.business_name;
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLocked, setIsLocked] = useState(localStorage.getItem('backwel_admin_locked') === 'true');
@@ -43,26 +46,8 @@ useEffect(() => {
 
 const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?.roles?.includes('OWNER');
 
-  if (!session?.active || !hasAdminAccess) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-bg-primary text-text-primary p-8">
-        <h1 className="text-3xl font-bold text-accent mb-4">🛑 Redirección Pausada (Debug)</h1>
-        <p className="mb-4 opacity-80">El sistema intentó patearte porque detectó que no tienes sesión o no eres ADMIN/OWNER.</p>
-        <div className="bg-bg-secondary p-6 rounded-lg border border-brand-primary/20 w-full max-w-2xl overflow-auto">
-          <h2 className="font-bold mb-2">Estado actual de useSession():</h2>
-          <pre className="text-sm font-mono text-brand-primary">
-            {JSON.stringify(session, null, 2)}
-          </pre>
-        </div>
-        <Link 
-          to="/login" 
-          state={{ from: location.pathname }}
-          className="text-brand-secondary hover:text-brand-primary underline transition-colors mt-6"
-        >
-          Forzar redirección manual al Login
-        </Link>
-      </div>
-    );
+ if (!session?.active || !hasAdminAccess) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   if (isLocked) {
@@ -149,7 +134,7 @@ const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?
           </NavLink>
         </nav>
         
-        <div className="p-4 border-t border-text-primary/10 flex flex-col items-center">
+        <div className="p-4 border-t border-text-primary/10 flex flex-col items-center gap-2">
           <button 
             onClick={toggleTheme}
             className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-bg-primary text-text-primary/70 hover:text-brand-primary transition-colors"
@@ -162,6 +147,17 @@ const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?
             )}
             {!isCollapsed && <span className="ml-3 font-medium">Tema {theme === 'dark' ? 'Oscuro' : 'Claro'}</span>}
           </button>
+
+          <button 
+            onClick={() => {
+              window.location.href = 'http://localhost:8080/logout';
+            }}
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-red-500/10 text-text-primary/70 hover:text-red-500 transition-colors"
+            title="Cerrar Sesión"
+          >
+            <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            {!isCollapsed && <span className="ml-3 font-medium">Cerrar Sesión</span>}
+          </button>
         </div>
       </aside>
       
@@ -170,7 +166,7 @@ const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?
           <Outlet />
         </div>
         <footer className="mt-8 pt-4 border-t border-text-primary/10 text-center text-xs opacity-50 font-medium shrink-0">
-          Backwel Software Solutions &copy; {new Date().getFullYear()}
+          {bName || 'Backwel Software Solutions'} &copy; {new Date().getFullYear()}
         </footer>
       </main>
     </div>

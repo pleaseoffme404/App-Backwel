@@ -2,13 +2,13 @@ package com.backwell.auth_server.controller;
 
 import com.backwell.auth_server.dto.request.GrantRoleRequest;
 import com.backwell.auth_server.dto.response.MessageResponse;
-import com.backwell.enums.RoleName;
 import com.backwell.auth_server.jpa.service.JpaUserService;
-import com.backwell.auth_server.security.user.IdentityContainer;
+import com.backwell.auth_server.resolver.CurrentUser;
+import com.backwell.auth_server.security.user.UserDTO;
+import com.backwell.enums.RoleName;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,13 +24,14 @@ public class RolesController {
     private final JpaUserService jpaUserService;
 
     @PostMapping("/grant")
-    public ResponseEntity<MessageResponse> grantRole(
+    public ResponseEntity<MessageResponse> grantRole (
             @RequestBody GrantRoleRequest request,
-            @AuthenticationPrincipal IdentityContainer userDetails) {
+            @CurrentUser UserDTO userDTO
+    ) {
 
         RoleName requestedRole = RoleName.fromString(request.roleName());
 
-        Set<RoleName> roles = userDetails.getUserDTO().roles()
+        Set<RoleName> roles = userDTO.roles()
                 .stream()
                 .map(RoleName::fromString)
                 .collect(Collectors.toSet());
@@ -48,11 +49,11 @@ public class RolesController {
     @PostMapping("/revoke")
     public ResponseEntity<MessageResponse> revokeRole(
             @RequestBody GrantRoleRequest request,
-            @AuthenticationPrincipal IdentityContainer userDetails
+            @CurrentUser UserDTO userDTO
     ) {
         RoleName requestedRole = RoleName.fromString(request.roleName());
 
-        Set<RoleName> roles = userDetails.getUserDTO().roles()
+        Set<RoleName> roles = userDTO.roles()
                 .stream()
                 .map(RoleName::fromString)
                 .collect(Collectors.toSet());

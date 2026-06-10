@@ -5,6 +5,7 @@ import com.backwell.api_service.modules.products.jpa.entity.prod.Category;
 
 import java.util.UUID;
 
+
 public record CategoryNodeDTO (
         UUID categoryId,
         String categoryName,
@@ -14,7 +15,7 @@ public record CategoryNodeDTO (
         return new CategoryNodeDTO(
                 c.getId(),
                 c.getName(),
-                c.getParent().getId()
+                c.getParent() != null ? c.getParent().getId() : null
         );
     }
 }

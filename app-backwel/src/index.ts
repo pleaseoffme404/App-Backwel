@@ -12,8 +12,16 @@ const port = (process.env.PORT || 3000) as number;
 
 const apiGatewayUrl = (process.env.API_GATEWAY_URL || 'http://localhost:8080') as string;
 
+app.post('/api/v1/auth/unlock', express.json(), (req, res) => {
+  console.log(`[MOCK] Bypass Java -> Verificando password para unlock`);
+  if (req.body.password === 'admin123') {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ error: 'invalid_password' });
+  }
+});
 app.use(
-  '/api/v1',
+  ['/api/v1', '/auth/register', '/auth/api/v1'],
   createProxyMiddleware({
     target: apiGatewayUrl,
     changeOrigin: true,

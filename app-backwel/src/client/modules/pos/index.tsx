@@ -21,16 +21,36 @@ export default function POSModule() {
     }
   }, [session]);
 
-  useEffect(() => {
+ useEffect(() => {
     const fetchCatalog = async () => {
       try {
         const response = await fetch('/api/v1/catalog/products');
         if (response.ok) {
           const data = await response.json();
-          setProducts(data);
+          const flattenedProducts: Product[] = [];
+          
+          data.forEach((prod: any) => {
+            if (prod.items && Array.isArray(prod.items)) {
+              prod.items.forEach((item: any) => {
+                const attrString = item.itemAttributes ? Object.values(item.itemAttributes).join(' - ') : '';
+                flattenedProducts.push({
+                  id: item.itemId,
+                  productId: prod.productId,
+                  name: `${prod.productName} ${attrString}`.trim(),
+                  price: item.basePrice || 0,
+                  stock: item.availableStock || 0,
+                  image: (item.pictures && item.pictures.length > 0) ? item.pictures[0] : ''
+                });
+              });
+            } else if (prod.id) {
+              flattenedProducts.push({ ...prod, stock: prod.stock || 0 });
+            }
+          });
+          
+          setProducts(flattenedProducts);
         }
       } catch (error) {
-        console.error("Error cargando catálogo mock:", error);
+        console.error(error);
       } finally {
         setIsLoading(false);
       }
@@ -43,10 +63,16 @@ export default function POSModule() {
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) return prev;
+        if (existing.quantity >= product.stock) {
+          alert(`Límite de stock: Solo hay ${product.stock} unidades de ${product.name}`);
+          return prev;
+        }
         return prev.map((item) =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
+      }
+      if (product.stock <= 0) {
+        return prev;
       }
       return [...prev, { ...product, quantity: 1 }];
     });
@@ -57,14 +83,17 @@ export default function POSModule() {
       prev.map((item) => {
         if (item.id === id) {
           const newQuantity = item.quantity + delta;
-          if (newQuantity <= 0 || newQuantity > item.stock) return item;
+          if (newQuantity <= 0) return item;
+          if (newQuantity > item.stock) {
+            alert(`Límite de stock: Solo hay ${item.stock} unidades de ${item.name}`);
+            return item;
+          }
           return { ...item, quantity: newQuantity };
         }
         return item;
       })
     );
   };
-
   const removeFromCart = (id: string) => {
     setCart((prev) => prev.filter((item) => item.id !== id));
   };

@@ -45,6 +45,7 @@ public class CategoryService {
         });
 
         Category saved =  categoryRepository.save(newCategory);
+        log.info("Saved Category with ID: `{}`", saved.getId());
 
         return CategoryNodeDTO.fromEntity(saved);
     }

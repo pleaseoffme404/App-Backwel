@@ -259,7 +259,7 @@
 								</property>
 								<property>
 									<key>defaultNameCase</key>
-									<value>as_is</value>
+									<value>lower</value>
 								</property>
 							</properties>
 						</database>

@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export interface BusinessConfig {
+  businessName?: string;
   business_name?: string;
-  legal_name?: string;
+  logoUrl?: string;
   logo_url?: string;
-  support_email?: string;
-  phone?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   address?: string;
-  tax_id?: string;
+  taxId?: string;
+  currency?: string;
 }
 
 let cachedBusinessConfig: BusinessConfig | null = null;
@@ -42,10 +44,28 @@ export function useBusiness() {
     }
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     const update = () => {
       setBusiness(cachedBusinessConfig);
       setIsLoading(false);
+
+      if (cachedBusinessConfig) {
+        const name = cachedBusinessConfig.businessName || cachedBusinessConfig.business_name;
+        const logo = cachedBusinessConfig.logoUrl || cachedBusinessConfig.logo_url;
+
+        if (name) {
+          document.title = name;
+        }
+        if (logo) {
+          let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+          }
+          link.href = logo;
+        }
+      }
     };
     listeners.add(update);
 
