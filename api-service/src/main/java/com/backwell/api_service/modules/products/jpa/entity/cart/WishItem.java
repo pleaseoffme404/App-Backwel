@@ -37,7 +37,7 @@ public class WishItem {
 
     @Column(nullable = false)
     @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
-    Instant lastUpdate;
+    private Instant lastUpdate;
 
     public WishItem(UUID id, Item item) {
         this.id = id;
