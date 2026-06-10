@@ -202,7 +202,22 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
-
+  data-ai-analytics:
+    build:
+      context: ./DataAiAnalitycs
+      dockerfile: Dockerfile
+    container_name: data-ai-analytics
+    restart: always
+    ports:
+      - "7777:7777"
+    depends_on:
+      app-backwel:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
+    environment:
+      - FRONTEND_URL=http://app-backwel:3000
+      - API_GATEWAY_URL=http://api-gateway:8080
   app-backwel:
     build:
       context: ./app-backwel
@@ -237,7 +252,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-
 volumes:
   meili_data:
   auth_postgres_data:
@@ -245,3 +259,5 @@ volumes:
   frontend_postgres_data:
   bff_redis_data:
   api_redis_data:
+
+  
