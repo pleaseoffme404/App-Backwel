@@ -60,9 +60,9 @@ export function HeroSection({ config, isLoading }: HeroSectionProps) {
           {subtitle}
         </p>
         <Link 
-          to="/pos" 
-          className="bg-brand-primary text-text-primary px-10 py-5 rounded-xl text-xl font-bold uppercase tracking-wider hover:bg-brand-secondary transition-all active:scale-95 shadow-xl shadow-brand-primary/20 border border-brand-primary/50"
-        >
+            to="/store" 
+            className="px-8 py-4 bg-brand-primary text-bg-primary font-black rounded-xl text-lg hover:opacity-90 transition-all hover:scale-105 shadow-xl shadow-brand-primary/20"
+          >
           {ctaText}
         </Link>
       </div>

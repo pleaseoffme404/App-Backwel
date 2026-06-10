@@ -136,3 +136,19 @@
 .input:checked + .slider:before {
   transform: translateX(30px);
 }
+
+.swal2-popup {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--brand-primary) !important;
+  border-radius: var(--radius-global) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+}
+
+.swal2-title, .swal2-html-container {
+  color: var(--text-primary) !important;
+}
+
+.swal2-confirm, .swal2-cancel {
+  border-radius: var(--radius-global) !important;
+}

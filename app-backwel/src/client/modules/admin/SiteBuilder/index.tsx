@@ -7,6 +7,7 @@ import { AboutSection } from '../../store/components/AboutSection';
 import { FeaturedProductsSection } from '../../store/components/FeaturedProductsSection';
 import { CatalogLinkSection } from '../../store/components/CatalogLinkSection';
 import { NotFound } from '../../../shared/ui/NotFound';
+import Swal from 'sweetalert2';
 
 const defaultColors = {
   dark_bg_primary: '#0F172A', dark_bg_secondary: '#1E293B',
@@ -59,14 +60,24 @@ const {
     );
   }
 
-  const handlePublish = async () => {
+const handlePublish = async () => {
     const success = await publishChanges();
     if (success) {
-      alert(activePage === 'theme' 
-        ? 'Tema publicado. Los usuarios lo verán de inmediato. Recarga tu página para aplicarlo en el panel de Admin.' 
-        : 'Cambios publicados exitosamente');
+      Swal.fire({
+        icon: 'success',
+        title: '¡Publicado!',
+        text: activePage === 'theme' 
+          ? 'Tema publicado. Los usuarios lo verán de inmediato. Recarga tu pagina apra aplicarlo en el panel de Admin.' 
+          : 'Cambios publicados exitosamente en la base de datos.',
+        confirmButtonColor: '#38BDF8'
+      });
     } else {
-      alert('Error al publicar los cambios');
+      Swal.fire({
+        icon: 'error',
+        title: 'Ouch',
+        text: 'Error al publicar los cambios, revisa la conexion.',
+        confirmButtonColor: '#ef4444'
+      });
     }
   };
 

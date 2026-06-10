@@ -26,12 +26,13 @@ const [items, setItems] = useState<ItemVariant[]>([]);
   const [catDescription, setCatDescription] = useState('');
   const [catParentId, setCatParentId] = useState('');
 
-  const fetchCategories = async () => {
+const fetchCategories = async () => {
     try {
       const res = await fetch('/api/v1/categories/');
       if (res.ok) {
         const data = await res.json();
-        setCategories(data);
+        const normalized = data.map((c: any) => ({ ...c, name: c.categoryName || c.name }));
+        setCategories(normalized);
       }
     } catch (error) {}
   };
