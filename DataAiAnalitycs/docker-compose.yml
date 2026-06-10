@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  analytics-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: data_ai_analytics_backend
+    ports:
+      - "7777:7777"
+    env_file:
+      - .env
+    restart: unless-stopped

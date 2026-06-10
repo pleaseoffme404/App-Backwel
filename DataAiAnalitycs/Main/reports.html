@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes — Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-main: #10141A;
+    --bg-sec: #1C212C;
+    --brand-pri: #0A3C51;
+    --brand-sec: #007299;
+    --accent: #7B4FBF;
+    --text-main: #F4F7FE;
+    --border: #2A3441;
+    --text-muted: #8E9BAE;
+    --sidebar-width: 260px;
+    --chart-grid: rgba(244, 247, 254, 0.05);
+  }
+
+  [data-theme="light"] {
+    --bg-main: #FFFFFF;
+    --bg-sec: #F4F7FE;
+    --brand-pri: #0A3C51;
+    --brand-sec: #007299;
+    --accent: #7B4FBF;
+    --text-main: #10141A;
+    --border: #E2E8F0;
+    --text-muted: #64748B;
+    --chart-grid: rgba(16, 20, 26, 0.05);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  .sidebar {
+    width: var(--sidebar-width); background: var(--bg-sec);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    transition: transform 0.3s ease, background-color 0.3s;
+    position: fixed; height: 100%; z-index: 20;
+  }
+  .sidebar.closed { transform: translateX(-100%); }
+
+  .sidebar-header {
+    padding: 1.25rem 1.5rem; font-size: 1.25rem; font-weight: 600;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px;
+  }
+  .sidebar-header i { font-size: 24px; color: var(--accent); }
+
+  .sidebar-menu { padding: 1.5rem 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .sidebar-menu li a {
+    padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.2s; color: var(--text-muted);
+    text-decoration: none;
+  }
+  .sidebar-menu li a:hover { background: rgba(123, 79, 191, 0.1); color: var(--text-main); }
+  .sidebar-menu li.active a {
+    background: var(--brand-pri); color: #F4F7FE; border-left: 4px solid var(--accent);
+  }
+
+  .main-content {
+    flex: 1; display: flex; flex-direction: column;
+    transition: margin-left 0.3s ease;
+    margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width));
+  }
+  .main-content.expanded { margin-left: 0; width: 100%; }
+
+  .header {
+    height: 64px; background: var(--bg-sec); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; z-index: 10; transition: background-color 0.3s;
+  }
+  .header-left { display: flex; align-items: center; }
+  .icon-btn {
+    background: none; border: none; font-size: 1.5rem; cursor: pointer;
+    color: var(--text-main); display: flex; align-items: center; justify-content: center;
+    padding: 0.5rem; border-radius: 8px; transition: background 0.2s;
+  }
+  .icon-btn:hover { background: var(--bg-main); }
+  .header-title { font-weight: 500; margin-left: 1rem; color: var(--text-muted); }
+
+  .content-wrapper {
+    padding: 2rem; overflow-y: auto; height: calc(100vh - 64px);
+    display: flex; flex-direction: column; gap: 1.5rem;
+  }
+
+  .page-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+  .page-header h1 { font-size: 24px; font-weight: 600; }
+  .actions-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--bg-sec);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    color: var(--text-main); transition: all 0.2s;
+  }
+  .btn:hover:not(:disabled) { background: var(--bg-main); border-color: var(--accent); }
+  .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  .btn-ia { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-ia:hover:not(:disabled) { background: #60389b; }
+  .btn-pdf:hover { color: #ef4444; border-color: #ef4444; }
+  .btn-csv:hover { color: #10b981; border-color: #10b981; }
+  .btn-json:hover { color: #f59e0b; border-color: #f59e0b; }
+  .btn-limpiar:hover:not(:disabled) { color: #ef4444; border-color: #ef4444; }
+  .btn-filtro.activo { background: var(--brand-pri); color: #F4F7FE; border-color: var(--accent); }
+
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .spin-icon { animation: spin 1s linear infinite; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
+  .kpi-card {
+    background: var(--bg-sec); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.5rem; display: flex; align-items: center; gap: 1rem;
+    transition: background-color 0.3s;
+  }
+  .kpi-icon {
+    width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 24px;
+  }
+  .kpi-1 { background: rgba(10, 60, 81, 0.2); color: var(--brand-sec); }
+  .kpi-2 { background: rgba(123, 79, 191, 0.2); color: var(--accent); }
+  .kpi-3 { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+  .kpi-info h3 { font-size: 14px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
+  .kpi-info p { font-size: 24px; font-weight: 700; color: var(--text-main); }
+
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+  @media (max-width: 1024px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--bg-sec); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.5rem; transition: background-color 0.3s;
+  }
+  .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .chart-title { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .chart-container { position: relative; height: 300px; width: 100%; }
+
+  .stats-card {
+    background: var(--bg-sec); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;
+    transition: background-color 0.3s;
+  }
+  .stats-metrics-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem;
+  }
+  .stat-metric {
+    background: var(--bg-main); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 6px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .stat-metric:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .stat-metric-label {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-metric-label i { font-size: 14px; }
+  .stat-metric-value { font-size: 22px; font-weight: 700; color: var(--text-main); line-height: 1.2; }
+  .stat-metric-sub { font-size: 11px; color: var(--text-muted); font-style: italic; }
+  .tendencia-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 2px;
+  }
+  .tendencia-badge.creciente  { background: rgba(16,185,129,0.12); color: #10b981; }
+  .tendencia-badge.decreciente{ background: rgba(239,68,68,0.12);  color: #ef4444; }
+  .tendencia-badge.estable    { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .tendencia-badge.nd         { background: rgba(142,155,174,0.12);color: var(--text-muted); }
+  .stats-footer {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    padding-top: 0.5rem; border-top: 1px solid var(--border);
+  }
+  .stats-footer-label { font-size: 13px; color: var(--text-muted); }
+  .stats-empty {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; color: var(--text-muted); font-size: 14px; padding: 2rem 0;
+  }
+
+  .toast {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 999;
+    background: var(--bg-sec); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem 1.25rem;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transform: translateY(100px); opacity: 0;
+    transition: all 0.3s ease;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 4px solid #10b981; }
+  .toast.error   { border-left: 4px solid #ef4444; }
+  .toast.info    { border-left: 4px solid var(--brand-sec); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <i class="ti ti-hexagon-filled"></i>
+    <span>Mi Proyecto</span>
+  </div>
+  <ul class="sidebar-menu">
+    <li><a href="upload.html"><i class="ti ti-cloud-upload"></i> Subir Datos</a></li>
+    <li class="active"><a href="reports.html"><i class="ti ti-chart-bar"></i> Reportes</a></li>
+    <li><a href="assistant.html"><i class="ti ti-robot"></i> Asistente de IA</a></li>
+    <li><a href="#"><i class="ti ti-settings"></i> Configuración</a></li>
+  </ul>
+</aside>
+
+<div class="main-content" id="main-content">
+  <header class="header">
+    <div class="header-left">
+      <button class="icon-btn" onclick="toggleSidebar()">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <span class="header-title">Panel de Administración</span>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema">
+      <i class="ti ti-sun"></i>
+    </button>
+  </header>
+
+  <div class="content-wrapper">
+    <div class="page-header">
+      <h1>Análisis de Datos Generados</h1>
+      <div class="actions-group">
+        <button class="btn btn-filtro" data-periodo="dia">Día</button>
+        <button class="btn btn-filtro activo" data-periodo="semana">Semana</button>
+        <button class="btn btn-filtro" data-periodo="mes">Mes</button>
+        <button class="btn btn-filtro" data-periodo="año">Año</button>
+        <button class="btn btn-filtro" data-periodo="historico">Histórico</button>
+
+        <button class="btn btn-recalcular" id="btn-recalcular" onclick="recalcularPeriodo()"
+                style="background: var(--brand-sec); border-color: var(--brand-sec); color: #fff;">
+          <i class="ti ti-refresh"></i> Recalcular Período
+        </button>
+
+        <button class="btn btn-ia" id="btn-ia" onclick="runAIPipeline()">
+          <i class="ti ti-brain"></i> Análisis con IA
+        </button>
+
+        <button class="btn btn-pdf" onclick="descargarReporte('pdf')">
+          <i class="ti ti-file-type-pdf"></i> PDF
+        </button>
+        <button class="btn btn-csv" onclick="descargarReporte('csv')">
+          <i class="ti ti-file-type-csv"></i> CSV
+        </button>
+        <button class="btn btn-json" onclick="descargarReporte('json')">
+          <i class="ti ti-braces"></i> JSON
+        </button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-1"><i class="ti ti-files"></i></div>
+        <div class="kpi-info">
+          <h3>Formatos Procesados</h3>
+          <p id="kpi-files">...</p>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-2"><i class="ti ti-coin"></i></div>
+        <div class="kpi-info">
+          <h3>Total Ventas (Período)</h3>
+          <p id="kpi-rows">...</p>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon kpi-3"><i class="ti ti-checkup-list"></i></div>
+        <div class="kpi-info">
+          <h3>Tasa de Éxito</h3>
+          <p id="kpi-success">...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Volumen de Procesamiento (Lote Actual)</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Distribución por Formato</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="doughnutChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-card" id="stats-card">
+      <div class="chart-header" style="margin-bottom: 0;">
+        <span class="chart-title">
+          <i class="ti ti-math-function" style="margin-right:6px;color:var(--accent)"></i>
+          Estadísticas del Período
+        </span>
+        <span id="stats-columna-badge"
+              style="font-size:12px;color:var(--text-muted);background:var(--bg-main);
+                     padding:3px 10px;border-radius:20px;border:1px solid var(--border);">
+          —
+        </span>
+      </div>
+      <div class="stats-metrics-grid" id="stats-metrics-grid">
+        <div class="stats-empty">
+          <i class="ti ti-loader spin-icon"></i> Cargando estadísticas...
+        </div>
+      </div>
+      <div class="stats-footer" id="stats-footer" style="display:none;">
+        <span class="stats-footer-label">Tendencia de ventas:</span>
+        <span id="stats-tendencia-badge" class="tendencia-badge nd">—</span>
+        <span class="stats-footer-label" style="margin-left:auto;">
+          Registros analizados: <strong id="stats-total-registros">—</strong>
+        </span>
+      </div>
+    </div>
+
+    <div class="chart-card" id="knn-card">
+      <div class="chart-header">
+        <span class="chart-title">
+          <i class="ti ti-brain" style="color: var(--accent); margin-right: 8px;"></i>
+          Agrupación Espacial (Modelo K-Nearest Neighbors)
+        </span>
+      </div>
+      <div class="chart-container" style="height: 420px; position: relative;">
+        <canvas id="knnChart"></canvas>
+        <div id="knn-placeholder" style="
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 10px;
+            color: var(--text-muted); font-size: 14px;">
+          <i class="ti ti-chart-dots-3" style="font-size: 2.5rem; opacity: 0.4;"></i>
+          <span>Sin datos de clustering — ejecuta el análisis con IA</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end;">
+      <button class="btn btn-limpiar" id="btn-limpiar-ia" onclick="limpiarVistaIA()"
+              title="Elimina la caché visual del modelo KNN. No afecta la base de datos.">
+        <i class="ti ti-trash-x"></i> Limpiar vista de IA
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+  function showToast(msg, type = 'info', ms = 3500) {
+    const t = document.getElementById('toast');
+    const icons = { success: 'ti-circle-check', error: 'ti-alert-circle', info: 'ti-info-circle' };
+    t.className = `toast ${type}`;
+    t.innerHTML = `<i class="ti ${icons[type] || 'ti-info-circle'}" style="font-size:18px"></i> ${msg}`;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  function getPeriodoActivo() {
+    const btn = document.querySelector('.btn-filtro.activo');
+    return btn ? btn.getAttribute('data-periodo') : 'semana';
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    document.querySelector('#theme-btn i').className = newTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+    localStorage.setItem('theme', newTheme);
+    updateChartsTheme();
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('closed');
+    document.getElementById('main-content').classList.toggle('expanded');
+  }
+
+  let myLineChart, myDoughnutChart, knnChartInstance = null;
+
+  function getChartColors() {
+    const style = getComputedStyle(document.documentElement);
+    return {
+      text:     style.getPropertyValue('--text-main').trim(),
+      grid:     style.getPropertyValue('--chart-grid').trim(),
+      brandSec: '#007299',
+      accent:   '#7B4FBF',
+      brandPri: '#0A3C51',
+    };
+  }
+
+  function initEmptyCharts() {
+    const colors = getChartColors();
+    Chart.defaults.color = colors.text;
+    Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+
+    const ctxLine = document.getElementById('lineChart').getContext('2d');
+    myLineChart = new Chart(ctxLine, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Ventas', data: [],
+          borderColor: colors.accent,
+          backgroundColor: 'rgba(123, 79, 191, 0.1)',
+          borderWidth: 2, tension: 0.4, fill: true,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'top' } },
+        scales: {
+          y: { grid: { color: colors.grid } },
+          x: { grid: { display: false } },
+        },
+      },
+    });
+
+    const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+    myDoughnutChart = new Chart(ctxDoughnut, {
+      type: 'doughnut',
+      data: {
+        labels: [],
+        datasets: [{
+          data: [],
+          backgroundColor: [colors.brandSec, colors.accent, '#ef4444', colors.brandPri],
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '75%',
+        plugins: { legend: { position: 'bottom' } },
+      },
+    });
+  }
+
+  function updateChartsTheme() {
+    if (!myLineChart || !myDoughnutChart) return;
+    const colors = getChartColors();
+    Chart.defaults.color = colors.text;
+    myLineChart.options.scales.y.grid.color = colors.grid;
+    myLineChart.update();
+    myDoughnutChart.update();
+    if (knnChartInstance) {
+      knnChartInstance.options.scales.x.grid.color = colors.grid;
+      knnChartInstance.options.scales.y.grid.color = colors.grid;
+      knnChartInstance.update();
+    }
+  }
+
+
+  function renderKNNChart(knnData) {
+    const placeholder = document.getElementById('knn-placeholder');
+    if (!knnData || knnData.length === 0) {
+      if (placeholder) placeholder.style.display = 'flex';
+      return;
+    }
+    if (placeholder) placeholder.style.display = 'none';
+
+    const ctx = document.getElementById('knnChart').getContext('2d');
+    if (knnChartInstance) knnChartInstance.destroy();
+
+    const groups = {};
+    knnData.forEach(pt => {
+      const pred = pt.prediccion !== undefined ? pt.prediccion : 'Desconocido';
+      if (!groups[pred]) groups[pred] = [];
+      groups[pred].push({ x: pt.x, y: pt.y, raw: pt });
+    });
+
+    const COLORS = ['#007299', '#7B4FBF', '#10b981', '#f59e0b', '#ef4444'];
+    const datasets = Object.keys(groups).map((key, i) => ({
+      label: `Clúster: ${key}`,
+      data: groups[key],
+      backgroundColor: COLORS[i % COLORS.length],
+      borderColor:     COLORS[i % COLORS.length],
+      pointRadius: 5, pointHoverRadius: 8, borderWidth: 1,
+    }));
+
+    const style     = getComputedStyle(document.documentElement);
+    const textColor = style.getPropertyValue('--text-main').trim();
+    const gridColor = style.getPropertyValue('--chart-grid').trim();
+
+    knnChartInstance = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: textColor } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const pt = ctx.raw.raw;
+                return `Predicción: ${pt.prediccion} | Real: ${pt.clase_real} (X: ${pt.x.toFixed(2)}, Y: ${pt.y.toFixed(2)})`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: textColor } },
+          y: { grid: { color: gridColor }, ticks: { color: textColor } },
+        },
+      },
+    });
+  }
+
+
+  function descargarReporte(formato) {
+    const periodo = getPeriodoActivo();
+    window.open(`/api/download/report?formato=${encodeURIComponent(formato)}&periodo=${encodeURIComponent(periodo)}`, '_blank');
+  }
+
+
+  async function recalcularPeriodo() {
+    const periodo = getPeriodoActivo();
+    const btn     = document.getElementById('btn-recalcular');
+    const orig    = btn.innerHTML;
+
+    btn.innerHTML = '<i class="ti ti-loader spin-icon"></i> Recalculando...';
+    btn.disabled  = true;
+
+    try {
+      const res    = await fetch(`/api/recalculate?periodo=${encodeURIComponent(periodo)}`, { method: 'POST' });
+      const result = await res.json();
+      if (res.ok) {
+        showToast(`Recálculo de "${periodo}" iniciado en segundo plano.`, 'success');
+        // Espera 3s y recarga para ver resultados
+        setTimeout(() => loadDashboardData(periodo), 3000);
+      } else {
+        showToast('Error al recalcular: ' + (result.error || 'Desconocido'), 'error');
+      }
+    } catch (e) {
+      showToast('Error de conexión al intentar recalcular.', 'error');
+      console.error(e);
+    } finally {
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+    }
+  }
+
+
+  function renderEstadisticas(estadisticas) {
+    const grid    = document.getElementById('stats-metrics-grid');
+    const footer  = document.getElementById('stats-footer');
+    const badge   = document.getElementById('stats-columna-badge');
+    const tendEl  = document.getElementById('stats-tendencia-badge');
+    const totalEl = document.getElementById('stats-total-registros');
+
+    if (!estadisticas || !estadisticas.columnas || Object.keys(estadisticas.columnas).length === 0) {
+      grid.innerHTML = '<div class="stats-empty"><i class="ti ti-chart-off"></i> Sin estadísticas disponibles para este período.</div>';
+      footer.style.display = 'none';
+      badge.textContent = '—';
+      return;
+    }
+
+    const METRICAS = [
+      { key: 'promedio',      label: 'Promedio',       icon: 'ti-math',            fmt: fmtNum   },
+      { key: 'mediana',       label: 'Mediana',         icon: 'ti-chart-histogram', fmt: fmtNum   },
+      { key: 'moda',          label: 'Moda',            icon: 'ti-repeat',          fmt: fmtNum   },
+      { key: 'desv_estandar', label: 'Desv. Estándar',  icon: 'ti-wave-sine',       fmt: fmtNum   },
+      { key: 'sesgo',         label: 'Sesgo',           icon: 'ti-scale',           fmt: fmtSesgo },
+      { key: 'minimo',        label: 'Mínimo',          icon: 'ti-arrow-down',      fmt: fmtNum   },
+      { key: 'maximo',        label: 'Máximo',          icon: 'ti-arrow-up',        fmt: fmtNum   },
+    ];
+
+    const colNames = Object.keys(estadisticas.columnas);
+    const colPref  = colNames.includes('total_amount') ? 'total_amount' : colNames[0];
+    const colData  = estadisticas.columnas[colPref];
+
+    badge.textContent = colPref.replace(/_/g, ' ').toUpperCase();
+
+    grid.innerHTML = METRICAS.map(({ key, label, icon, fmt }) => {
+      const val   = colData[key];
+      const sub   = key === 'sesgo' && colData['sesgo_interpretacion'] ? colData['sesgo_interpretacion'] : '';
+      const shown = val !== null && val !== undefined ? fmt(val) : 'N/A';
+      return `
+        <div class="stat-metric">
+          <div class="stat-metric-label"><i class="ti ${icon}"></i> ${label}</div>
+          <div class="stat-metric-value">${shown}</div>
+          ${sub ? `<div class="stat-metric-sub">${sub}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    const tendencia = estadisticas.tendencia_ventas || '';
+    const totalReg  = estadisticas.total_registros  || colData.total_registros || '—';
+
+    let tendClass = 'nd', tendIcon = 'ti-minus';
+    if (tendencia.startsWith('Creciente'))   { tendClass = 'creciente';   tendIcon = 'ti-trending-up';   }
+    if (tendencia.startsWith('Decreciente')) { tendClass = 'decreciente'; tendIcon = 'ti-trending-down'; }
+    if (tendencia === 'Estable')             { tendClass = 'estable';     tendIcon = 'ti-minus';         }
+
+    tendEl.className    = `tendencia-badge ${tendClass}`;
+    tendEl.innerHTML    = `<i class="ti ${tendIcon}"></i> ${tendencia || 'Sin datos'}`;
+    totalEl.textContent = fmtInt(totalReg);
+    footer.style.display = 'flex';
+  }
+
+  function fmtNum(v)   { return v != null ? Number(v).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'; }
+  function fmtInt(v)   { return v != null ? Number(v).toLocaleString('es-MX') : 'N/A'; }
+  function fmtSesgo(v) { return v != null ? Number(v).toLocaleString('es-MX', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : 'N/A'; }
+
+
+  async function loadDashboardData(periodo = 'semana') {
+    try {
+      const res = await fetch(`/api/dashboard/stats?periodo=${encodeURIComponent(periodo)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderDashboard(data, periodo);
+    } catch (error) {
+      console.warn('Falla en la API.', error);
+      renderEstadisticas(null);
+    }
+  }
+
+  function renderDashboard(data, periodo) {
+    myLineChart.data.labels = [];
+    myLineChart.data.datasets[0].data = [];
+
+    if (data.grafico_principal?.tendencia_ventas?.length > 0) {
+      const tendencia   = data.grafico_principal.tendencia_ventas;
+      const totalVentas = tendencia.reduce((acc, curr) => acc + (curr.total_amount || 0), 0);
+      const totalArchivos = data.distribucion_formatos
+        ? Object.values(data.distribucion_formatos).reduce((a, b) => a + b, 0) : 0;
+
+      document.getElementById('kpi-files').textContent   = totalArchivos;
+      document.getElementById('kpi-rows').textContent    = `$${totalVentas.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+      document.getElementById('kpi-success').textContent = '100%';
+
+      const labelKey = ['dia', 'semana'].includes(periodo) ? 'fecha' : 'mes_nombre';
+      myLineChart.data.labels               = tendencia.map(i => i[labelKey] || i.fecha || i.mes_nombre);
+      myLineChart.data.datasets[0].data     = tendencia.map(i => i.total_amount || 0);
+      myLineChart.data.datasets[0].label    = `Ventas (${periodo.toUpperCase()})`;
+    } else {
+      document.getElementById('kpi-files').textContent   = '0';
+      document.getElementById('kpi-rows').textContent    = '$0.00';
+      document.getElementById('kpi-success').textContent = '0%';
+    }
+
+    myLineChart.update();
+
+    if (data.distribucion_formatos) {
+      myDoughnutChart.data.labels           = Object.keys(data.distribucion_formatos).map(k => k.toUpperCase());
+      myDoughnutChart.data.datasets[0].data = Object.values(data.distribucion_formatos);
+      myDoughnutChart.update();
+    }
+
+    renderEstadisticas(data.estadisticas || null);
+  }
+
+
+  async function runAIPipeline() {
+    const btn  = document.getElementById('btn-ia');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-loader spin-icon"></i> Ejecutando IA...';
+    btn.disabled  = true;
+
+    try {
+      const res    = await fetch('/api/run-ia-pipeline', { method: 'POST' });
+      const result = await res.json();
+      if (res.ok) {
+        showToast(`IA completada en ${result.elapsed_s || 0}s`, 'success');
+        if (result.knn_plot_data?.length > 0) renderKNNChart(result.knn_plot_data);
+        loadDashboardData(getPeriodoActivo());
+      } else {
+        showToast('Error en Pipeline de IA: ' + (result.error || 'Desconocido'), 'error');
+      }
+    } catch (e) {
+      showToast('Error de conexión con el Pipeline de IA.', 'error');
+      console.error(e);
+    } finally {
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+    }
+  }
+
+  async function loadSavedKNNChart() {
+    try {
+      const res = await fetch('/api/ia/plot-data');
+      if (!res.ok) return;
+      const data   = await res.json();
+      const points = (data && data.points) ? data.points : data;
+      if (Array.isArray(points) && points.length > 0) renderKNNChart(points);
+    } catch (err) {
+      console.warn('loadSavedKNNChart: no se pudo restaurar la gráfica KNN.', err);
+    }
+  }
+  async function limpiarVistaIA() {
+    const btn  = document.getElementById('btn-limpiar-ia');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="ti ti-loader spin-icon"></i> Limpiando...';
+    btn.disabled  = true;
+
+    try {
+      const res    = await fetch('/api/limpiar-ia', { method: 'POST' });
+      const result = await res.json();
+
+      if (res.ok && result.status === 'success') {
+        if (knnChartInstance) { knnChartInstance.destroy(); knnChartInstance = null; }
+        const canvas = document.getElementById('knnChart');
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        const placeholder = document.getElementById('knn-placeholder');
+        if (placeholder) placeholder.style.display = 'flex';
+        showToast('Vista de IA limpiada correctamente.', 'success');
+      } else {
+        showToast('No se pudo limpiar: ' + (result.error || 'Error desconocido'), 'error');
+      }
+    } catch (e) {
+      showToast('Error de conexión al limpiar vista de IA.', 'error');
+      console.error(e);
+    } finally {
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.querySelector('#theme-btn i').className = savedTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+    }
+
+    initEmptyCharts();
+
+    document.querySelectorAll('.btn-filtro').forEach(boton => {
+      boton.addEventListener('click', e => {
+        document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('activo'));
+        e.target.classList.add('activo');
+        loadDashboardData(e.target.getAttribute('data-periodo'));
+      });
+    });
+
+    loadDashboardData('semana');
+    loadSavedKNNChart();
+  });
+</script>
+</body>
+</html>

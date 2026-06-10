@@ -1,0 +1,27 @@
+# Entorno virtual
+venv/
+Lib/
+Scripts/
+share/
+# Caché de Python
+__pycache__/
+*.pyc
+
+# Variables de entorno
+.env
+
+# IDEs
+.idea/
+.vscode/
+/example
+/datasets_simulados
+/datasets_simulados_masivos
+/data2
+/Backend/pipelines/artifacts
+
+/IA/artifacts
+
+datasets_simulados/
+datasets_simulados_masivos/
+*.joblib
+*.log

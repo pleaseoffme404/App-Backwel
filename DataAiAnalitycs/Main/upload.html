@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subir y procesar archivos — Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  /* --- SISTEMA DE COLORES (CSS VARIABLES) --- */
+  :root {
+    /* MODO OSCURO (DEFAULT) */
+    --bg-main: #10141A;
+    --bg-sec: #1C212C;
+    --brand-pri: #0A3C51;
+    --brand-sec: #007299;
+    --accent: #7B4FBF;
+    --text-main: #F4F7FE;
+
+    /* Colores derivados para bordes y estados */
+    --border: #2A3441;
+    --text-muted: #8E9BAE;
+    --sidebar-width: 260px;
+  }
+
+  [data-theme="light"] {
+    /* MODO CLARO */
+    --bg-main: #FFFFFF;
+    --bg-sec: #F4F7FE;
+    --brand-pri: #0A3C51;
+    --brand-sec: #007299;
+    --accent: #7B4FBF;
+    --text-main: #10141A;
+
+    /* Colores derivados para bordes y estados */
+    --border: #E2E8F0;
+    --text-muted: #64748B;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  /* --- SIDEBAR --- */
+  .sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-sec);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease, background-color 0.3s;
+    position: fixed;
+    height: 100%;
+    z-index: 20;
+  }
+  .sidebar.closed { transform: translateX(-100%); }
+
+  .sidebar-header {
+    padding: 1.25rem 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .sidebar-header i { font-size: 24px; color: var(--accent); }
+
+  .sidebar-menu { padding: 1.5rem 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .sidebar-menu li {
+    padding: 0.75rem 1.5rem;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.2s; color: var(--text-muted);
+  }
+  .sidebar-menu li:hover { background: rgba(123, 79, 191, 0.1); color: var(--text-main); }
+  .sidebar-menu li.active {
+    background: var(--brand-pri);
+    color: #F4F7FE; /* Forzamos claro por el fondo brand-pri */
+    border-left: 4px solid var(--accent);
+  }
+
+  /* --- CONTENIDO PRINCIPAL --- */
+  .main-content {
+    flex: 1; display: flex; flex-direction: column;
+    transition: margin-left 0.3s ease;
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+  }
+  .main-content.expanded { margin-left: 0; width: 100%; }
+
+  /* --- HEADER --- */
+  .header {
+    height: 64px; background: var(--bg-sec);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; z-index: 10;
+    transition: background-color 0.3s;
+  }
+  .header-left { display: flex; align-items: center; }
+  .icon-btn {
+    background: none; border: none; font-size: 1.5rem;
+    cursor: pointer; color: var(--text-main);
+    display: flex; align-items: center; justify-content: center;
+    padding: 0.5rem; border-radius: 8px; transition: background 0.2s;
+  }
+  .icon-btn:hover { background: var(--bg-main); }
+  .header-title { font-weight: 500; margin-left: 1rem; color: var(--text-muted); }
+
+  .content-wrapper {
+    padding: 2.5rem 1.5rem; overflow-y: auto;
+    display: flex; justify-content: center; align-items: flex-start;
+    height: calc(100vh - 64px);
+  }
+
+  /* --- TARJETA Y SUBIDA DE ARCHIVOS --- */
+  .card {
+    background: var(--bg-sec);
+    border-radius: 16px; border: 1px solid var(--border);
+    padding: 2.5rem; width: 100%; max-width: 680px;
+    transition: background-color 0.3s;
+  }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 8px; color: var(--text-main); }
+  .sub { font-size: 15px; color: var(--text-muted); margin-bottom: 2rem; }
+  code { font-family: monospace; background: var(--bg-main); padding: 4px 8px; border-radius: 6px; font-size: 14px; color: var(--accent); border: 1px solid var(--border); }
+
+  #drop {
+    border: 2px dashed var(--border); border-radius: 16px;
+    padding: 3rem 2rem; text-align: center; cursor: pointer;
+    transition: all 0.2s ease; background: var(--bg-main);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  }
+  #drop:hover, #drop.over { border-color: var(--accent); background: rgba(123, 79, 191, 0.05); }
+  #drop i {
+    font-size: 48px; color: var(--brand-sec);
+    background: rgba(0, 114, 153, 0.1); padding: 1rem;
+    border-radius: 50%; margin-bottom: 0.5rem;
+  }
+  #drop p { font-size: 16px; font-weight: 500; color: var(--text-main); }
+  #drop small { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+  /* --- BOTONES Y LISTA --- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--bg-sec);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    color: var(--text-main); transition: all 0.2s;
+  }
+  .btn:hover { background: var(--bg-main); border-color: var(--accent); }
+  .btn-primary { background: var(--brand-pri); color: #F4F7FE; border-color: transparent; }
+  .btn-primary:hover { background: var(--brand-sec); }
+
+  #queue { margin-top: 2rem; display: flex; flex-direction: column; gap: 12px; }
+  .item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+    background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px;
+  }
+  .item i { font-size: 22px; color: var(--accent); flex-shrink: 0; }
+  .item-name { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-ext { font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px; background: var(--bg-sec); color: var(--text-muted); border: 1px solid var(--border); }
+  .item-remove { background: none; border: none; cursor: pointer; color: #ef4444; padding: 6px; font-size: 18px; border-radius: 6px; transition: all 0.2s; }
+  .item-remove:hover { background: rgba(239, 68, 68, 0.1); }
+  .item-status { font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .status-ok { color: #10b981; }
+  .status-err { color: #ef4444; }
+
+  .actions { margin-top: 2rem; display: flex; gap: 12px; align-items: center; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+  #summary { font-size: 14px; font-weight: 500; color: var(--text-muted); margin-left: auto; background: var(--bg-main); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <i class="ti ti-hexagon-filled"></i>
+    <span>Mi Proyecto</span>
+  </div>
+  <ul class="sidebar-menu">
+    <li class="active" onclick="window.location.href='upload.html'">
+      <i class="ti ti-cloud-upload"></i> Subir Datos
+    </li>
+    <li onclick="window.location.href='reports.html'">
+      <i class="ti ti-chart-bar"></i> Reportes
+    </li>
+    <li onclick="window.location.href='assistant.html'">
+      <i class="ti ti-robot"></i> Asistente de IA
+    </li>
+    <li>
+      <i class="ti ti-settings"></i> Configuración
+    </li>
+  </ul>
+</aside>
+
+<div class="main-content" id="main-content">
+
+  <header class="header">
+    <div class="header-left">
+      <button class="icon-btn" onclick="toggleSidebar()">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <span class="header-title">Panel de Administración</span>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema">
+      <i class="ti ti-sun"></i>
+    </button>
+  </header>
+
+  <div class="content-wrapper">
+    <div class="card">
+      <h1>Subir y procesar archivos</h1>
+      <p class="sub">Los archivos se guardarán en el directorio <code>example/</code> y se procesarán automáticamente.</p>
+
+      <div id="drop" onclick="document.getElementById('fileInput').click()">
+        <i class="ti ti-cloud-upload"></i>
+        <p>Arrastra tus archivos aquí o haz clic para explorar</p>
+        <small>Formatos soportados: CSV, XLSX, JSON, TXT, XML</small>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.json,.txt,.xml" style="display:none">
+
+      <div id="queue"></div>
+
+      <div class="actions" id="actions" style="display:none">
+        <button class="btn btn-primary" onclick="uploadFiles()">
+          <i class="ti ti-upload"></i> Subir y procesar archivos
+        </button>
+        <button class="btn" onclick="clearQueue()">
+          <i class="ti ti-trash"></i> Limpiar lista
+        </button>
+        <span id="summary"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// --- LÓGICA DEL TEMA ---
+function toggleTheme() {
+  const html = document.documentElement;
+  const currentTheme = html.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', newTheme);
+
+  // Cambiar ícono
+  const icon = document.querySelector('#theme-btn i');
+  icon.className = newTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+
+  // Opcional: Guardar en localStorage
+  localStorage.setItem('theme', newTheme);
+}
+
+// Cargar preferencia guardada o usar preferencia del sistema
+window.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.querySelector('#theme-btn i').className = savedTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+  }
+});
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('closed');
+  document.getElementById('main-content').classList.toggle('expanded');
+}
+
+// --- SCRIPT ORIGINAL DE SUBIDA ---
+const ALLOWED=['.csv','.xlsx','.json','.txt','.xml'];
+let queue=[];
+
+function extIcon(ext){
+  return {'.csv':'ti-table','.xlsx':'ti-file-spreadsheet',
+          '.json':'ti-braces','.txt':'ti-file-text',
+          '.xml':'ti-code'}[ext]||'ti-file';
+}
+
+function renderQueue(){
+  const el=document.getElementById('queue');
+  const act=document.getElementById('actions');
+  if(!queue.length){el.innerHTML='';act.style.display='none';return;}
+  act.style.display='flex';
+  document.getElementById('summary').textContent=
+    queue.length+' archivo'+(queue.length>1?'s':'');
+  el.innerHTML=queue.map((f,i)=>`
+    <div class="item" id="item-${i}">
+      <i class="ti ${extIcon(f.ext)}"></i>
+      <span class="item-name" title="${f.name}">${f.name}</span>
+      <span class="item-ext">${f.ext.slice(1).toUpperCase()}</span>
+      <span class="item-status" id="st-${i}"></span>
+      <button class="item-remove" onclick="removeFile(${i})" title="Quitar">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>`).join('');
+}
+
+function addFiles(files){
+  for(const f of files){
+    const ext=f.name.slice(f.name.lastIndexOf('.')).toLowerCase();
+    if(!ALLOWED.includes(ext)){alert(`"${f.name}": extensión no permitida (${ext})`);continue;}
+    if(queue.find(q=>q.name===f.name)) continue;
+    queue.push({name:f.name,ext,file:f});
+  }
+  renderQueue();
+}
+
+function removeFile(i){queue.splice(i,1);renderQueue();}
+function clearQueue(){queue=[];renderQueue();}
+
+document.getElementById('fileInput').addEventListener('change',e=>{
+  addFiles(e.target.files);e.target.value='';
+});
+
+const drop=document.getElementById('drop');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over');});
+drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{
+  e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files);
+});
+
+async function uploadFiles(){
+  if(!queue.length)return;
+  const fd=new FormData();
+  queue.forEach(f=>fd.append('files',f.file,f.name));
+  queue.forEach((_,i)=>{const s=document.getElementById('st-'+i);if(s)s.textContent='...';});
+  try{
+    const res=await fetch('/upload',{method:'POST',body:fd});
+    const data=await res.json();
+    if(data.error){alert(data.error);return;}
+    data.results.forEach(r=>{
+      const idx=queue.findIndex(q=>q.name===r.file||q.name.endsWith(r.file));
+      if(idx<0)return;
+      const st=document.getElementById('st-'+idx);
+      if(st){
+        st.textContent=r.status==='ok'?'✓ guardado':'✗ '+r.msg;
+        st.className='item-status '+(r.status==='ok'?'status-ok':'status-err');
+      }
+    });
+    const ok=data.results.filter(r=>r.status==='ok').length;
+    document.getElementById('summary').textContent=
+      ok+'/'+data.results.length+' procesados correctamente.';
+  }catch(e){
+    alert('No se pudo conectar con el servidor. ¿Está corriendo app.py?');
+  }
+}
+</script>
+</body>
+</html>

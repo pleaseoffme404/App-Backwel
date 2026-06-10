@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente de IA — Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  /* --- SISTEMA DE COLORES --- */
+  :root {
+    --bg-main: #10141A;
+    --bg-sec: #1C212C;
+    --brand-pri: #0A3C51;
+    --brand-sec: #007299;
+    --accent: #7B4FBF;
+    --text-main: #F4F7FE;
+    --border: #2A3441;
+    --text-muted: #8E9BAE;
+    --sidebar-width: 260px;
+    /* Colores de segmentos RFM */
+    --seg-best: #10B981;
+    --seg-loyal: #3B82F6;
+    --seg-promising: #F59E0B;
+    --seg-risk: #EF4444;
+    --seg-inactive: #6B7280;
+    --seg-occasional: #8B5CF6;
+  }
+
+  [data-theme="light"] {
+    --bg-main: #FFFFFF;
+    --bg-sec: #F4F7FE;
+    --brand-pri: #0A3C51;
+    --brand-sec: #007299;
+    --accent: #7B4FBF;
+    --text-main: #10141A;
+    --border: #E2E8F0;
+    --text-muted: #64748B;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  /* --- SIDEBAR --- */
+  .sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-sec);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transition: transform 0.3s ease, background-color 0.3s;
+    position: fixed; height: 100%; z-index: 20;
+  }
+  .sidebar.closed { transform: translateX(-100%); }
+
+  .sidebar-header {
+    padding: 1.25rem 1.5rem; font-size: 1.25rem; font-weight: 600;
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px;
+  }
+  .sidebar-header i { font-size: 24px; color: var(--accent); }
+
+  .sidebar-menu { padding: 1.5rem 0; list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .sidebar-menu li {
+    padding: 0.75rem 1.5rem; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.2s; color: var(--text-muted);
+  }
+  .sidebar-menu li:hover { background: rgba(123, 79, 191, 0.1); color: var(--text-main); }
+  .sidebar-menu li.active {
+    background: var(--brand-pri); color: #F4F7FE; border-left: 4px solid var(--accent);
+  }
+
+  /* --- CONTENIDO PRINCIPAL --- */
+  .main-content {
+    flex: 1; display: flex; flex-direction: column;
+    margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width));
+    transition: margin-left 0.3s ease;
+  }
+  .main-content.expanded { margin-left: 0; width: 100%; }
+
+  /* --- HEADER --- */
+  .header {
+    height: 64px; background: var(--bg-sec); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 1.5rem; z-index: 10; flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; }
+  .icon-btn {
+    background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-main);
+    display: flex; align-items: center; justify-content: center; padding: 0.5rem; border-radius: 8px;
+  }
+  .icon-btn:hover { background: var(--bg-main); }
+  .header-title { font-weight: 500; margin-left: 1rem; color: var(--text-muted); }
+
+  /* --- ÁREA DE CONTENIDO --- */
+  .content-wrapper {
+    padding: 1.5rem; flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 1.5rem; overflow-y: auto;
+    height: calc(100vh - 64px);
+  }
+
+  /* --- BOTONES --- */
+  .btn-primary {
+    background: var(--brand-sec); color: #fff; border: none;
+    padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  .btn-primary:hover { background: var(--brand-pri); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .spin-anim { animation: spin 1s linear infinite; }
+
+  /* --- PANEL GENÉRICO --- */
+  .chart-panel {
+    background: var(--bg-sec); border-radius: 16px; border: 1px solid var(--border);
+    width: 100%; max-width: 800px; padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); flex-shrink: 0;
+  }
+  .chart-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+  }
+  .chart-header h3 { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .chart-title-wrapper { display: flex; align-items: center; gap: 10px; }
+  .chart-wrapper { position: relative; height: 300px; width: 100%; }
+
+  /* --- PANEL RFM — segmentos y tabla --- */
+  .rfm-summary-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 1.25rem;
+  }
+  .rfm-kpi {
+    background: var(--bg-main); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; text-align: center;
+    transition: border-color 0.3s;
+  }
+  .rfm-kpi.highlighted { border-color: var(--accent); }
+  .rfm-kpi .kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--text-main); }
+  .rfm-kpi .kpi-label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── NUEVO: Fila de chips/filtros de segmento ── */
+  .rfm-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+  .seg-chip {
+    padding: 5px 13px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: opacity 0.2s, box-shadow 0.2s, transform 0.1s;
+    color: #fff;
+    opacity: 0.55;
+    background: none;
+    white-space: nowrap;
+  }
+  .seg-chip:hover  { opacity: 0.85; transform: translateY(-1px); }
+  .seg-chip.active { opacity: 1; box-shadow: 0 0 0 3px rgba(255,255,255,0.18); }
+  .seg-chip:active { transform: scale(0.97); }
+
+  .seg-chip-all       { background: var(--border); color: var(--text-muted); border-color: var(--border); }
+  .seg-chip-all.active{ background: #3a4555; color: var(--text-main); opacity: 1; }
+  .seg-chip-best      { background: var(--seg-best); }
+  .seg-chip-loyal     { background: var(--seg-loyal); }
+  .seg-chip-promising { background: var(--seg-promising); color: #111; }
+  .seg-chip-risk      { background: var(--seg-risk); }
+  .seg-chip-inactive  { background: var(--seg-inactive); }
+  .seg-chip-occasional{ background: var(--seg-occasional); }
+
+  /* ── NUEVO: Tarjeta de descripción del segmento activo ── */
+  .rfm-seg-detail {
+    display: none;
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 1.25rem;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    transition: border-left-color 0.3s;
+  }
+  .rfm-seg-detail.visible { display: block; }
+  .rfm-seg-detail strong  { color: var(--text-main); font-size: 14px; display: block; margin-bottom: 4px; }
+
+  /* Barras de segmentos */
+  .rfm-segments { display: flex; flex-direction: column; gap: 8px; }
+  .rfm-seg-row { display: flex; align-items: center; gap: 10px; font-size: 13px; transition: opacity 0.25s; }
+  .rfm-seg-row.dimmed { opacity: 0.25; }
+  .rfm-seg-name { width: 140px; color: var(--text-main); flex-shrink: 0; }
+  .rfm-seg-bar-track {
+    flex: 1; height: 8px; background: var(--border); border-radius: 99px; overflow: hidden;
+  }
+  .rfm-seg-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+  .rfm-seg-count { width: 40px; text-align: right; color: var(--text-muted); font-size: 12px; }
+  .rfm-seg-pct   { width: 42px; text-align: right; color: var(--text-muted); font-size: 12px; }
+
+  .bar-best      { background: var(--seg-best); }
+  .bar-loyal     { background: var(--seg-loyal); }
+  .bar-promising { background: var(--seg-promising); }
+  .bar-risk      { background: var(--seg-risk); }
+  .bar-inactive  { background: var(--seg-inactive); }
+  .bar-occasional{ background: var(--seg-occasional); }
+
+  /* Tabla de top clientes */
+  .rfm-table-wrap { overflow-x: auto; margin-top: 1.25rem; }
+  .rfm-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .rfm-table th {
+    text-align: left; padding: 8px 12px; color: var(--text-muted);
+    border-bottom: 1px solid var(--border); font-weight: 500; white-space: nowrap;
+  }
+  .rfm-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--text-main); white-space: nowrap;
+  }
+  .rfm-table tr:last-child td { border-bottom: none; }
+  .rfm-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .seg-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 600; color: #fff;
+  }
+  .badge-best_customers { background: var(--seg-best); }
+  .badge-loyal_customers{ background: var(--seg-loyal); }
+  .badge-promising      { background: var(--seg-promising); color: #111; }
+  .badge-at_risk        { background: var(--seg-risk); }
+  .badge-inactive       { background: var(--seg-inactive); }
+  .badge-occasional     { background: var(--seg-occasional); }
+
+  /* Estado vacío RFM */
+  .rfm-empty {
+    text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); font-size: 14px;
+  }
+  .rfm-empty i { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+
+  /* ── Cabecera de tabla con título de segmento + contador ── */
+  .rfm-table-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 1.25rem; margin-bottom: 0.75rem;
+  }
+  .rfm-table-title {
+    font-size: 13px; font-weight: 600; color: var(--text-main);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .rfm-table-title .seg-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .rfm-table-count {
+    font-size: 12px; color: var(--text-muted);
+  }
+
+  /* ── Paginación ── */
+  .rfm-pagination {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 0.75rem 0 0.25rem; flex-wrap: wrap;
+  }
+  .rfm-page-btn {
+    background: var(--bg-main); border: 1px solid var(--border);
+    color: var(--text-muted); border-radius: 6px; padding: 4px 10px;
+    font-size: 12px; cursor: pointer; transition: all 0.15s; min-width: 32px;
+  }
+  .rfm-page-btn:hover { border-color: var(--brand-sec); color: var(--text-main); }
+  .rfm-page-btn.active {
+    background: var(--brand-sec); border-color: var(--brand-sec);
+    color: #fff; font-weight: 600;
+  }
+  .rfm-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .rfm-page-info { font-size: 12px; color: var(--text-muted); padding: 0 4px; }
+
+  /* Estado de pipeline en curso */
+  .rfm-running-notice {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--text-main);
+    margin-top: 12px;
+  }
+  .rfm-running-notice i { color: #F59E0B; }
+
+  /* --- CHAT --- */
+  .chat-container {
+    background: var(--bg-sec); border-radius: 16px; border: 1px solid var(--border);
+    width: 100%; max-width: 800px; flex: 1; min-height: 400px;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 1.5rem;
+  }
+
+  .chat-header-bar {
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.1);
+  }
+  .chat-header-bar i { font-size: 24px; color: var(--accent); }
+  .chat-header-bar h2 { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .chat-header-bar p  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .chat-box {
+    flex: 1; padding: 1.5rem; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+
+  .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; }
+  .msg-user { align-self: flex-end; }
+  .msg-ai   { align-self: flex-start; }
+
+  .msg-bubble { padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.5; }
+  .msg-user .msg-bubble {
+    background: var(--brand-sec); color: #fff; border-bottom-right-radius: 4px;
+  }
+  .msg-ai .msg-bubble {
+    background: var(--bg-main); color: var(--text-main);
+    border: 1px solid var(--border); border-bottom-left-radius: 4px;
+  }
+
+  .chat-input-area {
+    padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--bg-sec);
+    display: flex; gap: 12px; align-items: flex-end;
+  }
+  .chat-input-area textarea {
+    flex: 1; background: var(--bg-main); border: 1px solid var(--border);
+    color: var(--text-main); border-radius: 12px; padding: 12px 16px;
+    font-size: 15px; font-family: inherit; resize: none;
+    min-height: 48px; max-height: 120px; outline: none; transition: border-color 0.2s;
+  }
+  .chat-input-area textarea:focus { border-color: var(--brand-sec); }
+
+  .send-btn {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 12px; width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+  }
+  .send-btn:hover { background: #683caf; }
+  .send-btn:disabled { background: var(--border); cursor: not-allowed; color: var(--text-muted); }
+
+  .typing-indicator {
+    display: flex; gap: 4px; padding: 8px 12px; background: var(--bg-main);
+    border: 1px solid var(--border); border-radius: 16px; border-bottom-left-radius: 4px;
+    align-self: flex-start; align-items: center; height: 36px;
+  }
+  .typing-indicator span {
+    width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+  }
+  .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <i class="ti ti-hexagon-filled"></i>
+    <span>Mi Proyecto</span>
+  </div>
+  <ul class="sidebar-menu">
+    <li onclick="window.location.href='upload.html'">
+      <i class="ti ti-cloud-upload"></i> Subir Datos
+    </li>
+    <li onclick="window.location.href='reports.html'">
+      <i class="ti ti-chart-bar"></i> Reportes
+    </li>
+    <li class="active" onclick="window.location.href='assistant.html'">
+      <i class="ti ti-robot"></i> Asistente de IA
+    </li>
+    <li>
+      <i class="ti ti-settings"></i> Configuración
+    </li>
+  </ul>
+</aside>
+
+<div class="main-content" id="main-content">
+  <header class="header">
+    <div class="header-left">
+      <button class="icon-btn" onclick="toggleSidebar()">
+        <i class="ti ti-menu-2"></i>
+      </button>
+      <span class="header-title">Panel de Administración</span>
+    </div>
+    <button class="icon-btn" onclick="toggleTheme()" id="theme-btn" title="Cambiar tema">
+      <i class="ti ti-sun"></i>
+    </button>
+  </header>
+
+  <div class="content-wrapper">
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PANEL 1 — Predicción de Ventas (sin cambios)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="chart-panel">
+      <div class="chart-header">
+        <div class="chart-title-wrapper">
+          <h3>Predicción de Ventas</h3>
+          <i class="ti ti-trending-up" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <button class="btn-primary" id="calc-pipeline-btn" onclick="triggerPipeline()">
+          <i class="ti ti-calculator"></i> Calcular predicciones
+        </button>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="salesRegressionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PANEL 2 — Segmentación RFM de Clientes
+    ═══════════════════════════════════════════════════════ -->
+    <div class="chart-panel" id="rfm-panel">
+      <div class="chart-header">
+        <div class="chart-title-wrapper">
+          <h3>Segmentación de Clientes (RFM)</h3>
+          <i class="ti ti-users-group" style="color: var(--accent); font-size: 1.2rem;"></i>
+        </div>
+        <button class="btn-primary" id="rfm-pipeline-btn" onclick="triggerCustomerPipeline()">
+          <i class="ti ti-analyze"></i> Recalcular RFM
+        </button>
+      </div>
+
+      <!-- ── NUEVO: Chips de filtro por segmento ── -->
+      <div class="rfm-filter-row" id="rfm-filter-row" style="display:none;">
+        <button class="seg-chip seg-chip-all active" data-seg="all" onclick="filterSegment('all', this)">
+          Todos
+        </button>
+        <button class="seg-chip seg-chip-best" data-seg="best_customers" onclick="filterSegment('best_customers', this)">
+          <i class="ti ti-crown" style="font-size:11px;"></i> Mejores clientes
+        </button>
+        <button class="seg-chip seg-chip-loyal" data-seg="loyal_customers" onclick="filterSegment('loyal_customers', this)">
+          <i class="ti ti-heart" style="font-size:11px;"></i> Leales
+        </button>
+        <button class="seg-chip seg-chip-promising" data-seg="promising" onclick="filterSegment('promising', this)">
+          <i class="ti ti-trending-up" style="font-size:11px;"></i> Prometedores
+        </button>
+        <button class="seg-chip seg-chip-risk" data-seg="at_risk" onclick="filterSegment('at_risk', this)">
+          <i class="ti ti-alert-triangle" style="font-size:11px;"></i> En riesgo
+        </button>
+        <button class="seg-chip seg-chip-inactive" data-seg="inactive" onclick="filterSegment('inactive', this)">
+          <i class="ti ti-zzz" style="font-size:11px;"></i> Inactivos
+        </button>
+        <button class="seg-chip seg-chip-occasional" data-seg="occasional" onclick="filterSegment('occasional', this)">
+          <i class="ti ti-clock" style="font-size:11px;"></i> Ocasionales
+        </button>
+      </div>
+
+      <!-- ── NUEVO: Tarjeta descriptiva del segmento activo ── -->
+      <div class="rfm-seg-detail" id="rfm-seg-detail"></div>
+
+      <!-- KPIs globales -->
+      <div class="rfm-summary-row" id="rfm-kpis">
+        <div class="rfm-kpi">
+          <div class="kpi-value" id="rfm-total-clients">—</div>
+          <div class="kpi-label">Clientes analizados</div>
+        </div>
+        <div class="rfm-kpi">
+          <div class="kpi-value" id="rfm-total-revenue">—</div>
+          <div class="kpi-label">Revenue total</div>
+        </div>
+        <div class="rfm-kpi">
+          <div class="kpi-value" id="rfm-avg-score">—</div>
+          <div class="kpi-label">Score RFM promedio</div>
+        </div>
+      </div>
+
+      <!-- Barras de distribución por segmento -->
+      <div id="rfm-segments-container">
+        <div class="rfm-empty" id="rfm-empty-state">
+          <i class="ti ti-chart-donut"></i>
+          Sin datos todavía. Presiona <strong>Recalcular RFM</strong> para iniciar el análisis.
+        </div>
+      </div>
+
+      <!-- Aviso de pipeline corriendo -->
+      <div class="rfm-running-notice" id="rfm-running-notice" style="display:none;">
+        <i class="ti ti-loader spin-anim"></i>
+        Pipeline RFM ejecutándose en segundo plano. Los resultados estarán disponibles en unos momentos…
+      </div>
+
+      <!-- Tabla top clientes -->
+      <div id="rfm-table-container"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PANEL 3 — Chat (sin cambios estructurales)
+    ═══════════════════════════════════════════════════════ -->
+    <div class="chat-container">
+      <div class="chat-header-bar">
+        <i class="ti ti-robot-face"></i>
+        <div>
+          <h2>Asistente de Datos</h2>
+          <p>Conectado al modelo de predicción</p>
+        </div>
+      </div>
+
+      <div class="chat-box" id="chat-box">
+        <div class="msg-wrapper msg-ai">
+          <div class="msg-bubble">
+            ¡Hola! He generado la proyección de ventas y el análisis de clientes RFM.
+            Puedes recalcular cada módulo por separado usando los botones superiores. ¿En qué te ayudo?
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="Escribe tu mensaje aquí..." rows="1"
+                  oninput="autoResize(this)" onkeydown="handleEnter(event)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+          <i class="ti ti-send"></i>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /content-wrapper -->
+</div><!-- /main-content -->
+
+<script>
+  // ═══════════════════════════════════════════════════════════════
+  // CONFIGURACIÓN DE SEGMENTOS RFM
+  // ═══════════════════════════════════════════════════════════════
+  const RFM_SEGMENTS = {
+    best_customers:  { label: 'Mejores clientes',    barClass: 'bar-best',       chipClass: 'seg-chip-best'       },
+    loyal_customers: { label: 'Clientes leales',     barClass: 'bar-loyal',      chipClass: 'seg-chip-loyal'      },
+    promising:       { label: 'Prometedores',         barClass: 'bar-promising',  chipClass: 'seg-chip-promising'  },
+    at_risk:         { label: 'En riesgo',            barClass: 'bar-risk',       chipClass: 'seg-chip-risk'       },
+    inactive:        { label: 'Inactivos',            barClass: 'bar-inactive',   chipClass: 'seg-chip-inactive'   },
+    occasional:      { label: 'Ocasionales',          barClass: 'bar-occasional', chipClass: 'seg-chip-occasional' },
+  };
+
+  // Textos descriptivos por segmento para la tarjeta de detalle
+  const RFM_DESCRIPTIONS = {
+    best_customers:  'Alta recencia, frecuencia y gasto. Son tu activo más valioso. Prioriza retención con programas VIP y trato personalizado.',
+    loyal_customers: 'Compran frecuentemente con buen gasto. Candidatos ideales para upgrades y referencias. Nutrir la relación con beneficios exclusivos.',
+    promising:       'Clientes recientes con potencial de crecer. Enfoca esfuerzos en aumentar su frecuencia con incentivos y campañas de cross-selling.',
+    at_risk:         'Solían comprar bien pero se están alejando. Activa campañas de re-engagement urgentes antes de perderlos definitivamente.',
+    inactive:        'Sin actividad prolongada. Evalúa si es rentable reactivarlos con ofertas especiales o redirige recursos a otros segmentos.',
+    occasional:      'Compran poco y de forma irregular. Oportunidad de convertirlos en leales con programas de fidelización bien dirigidos.',
+  };
+
+  // Estado global del panel RFM para poder filtrar sin recargar
+  let _rfmGlobalData  = null;
+  let _rfmActiveSeg   = 'all';
+  let _rfmCurrentPage = 1;
+  const RFM_PAGE_SIZE = 20;   // filas por página en la tabla de segmento
+
+  // ═══════════════════════════════════════════════════════════════
+  // FORECAST CHART (sin cambios)
+  // ═══════════════════════════════════════════════════════════════
+  function initChart() {
+    const ctx       = document.getElementById('salesRegressionChart').getContext('2d');
+    const style     = getComputedStyle(document.body);
+    const brandSec  = style.getPropertyValue('--brand-sec').trim()  || '#007299';
+    const accent    = style.getPropertyValue('--accent').trim()     || '#7B4FBF';
+    const textMuted = style.getPropertyValue('--text-muted').trim() || '#8E9BAE';
+    const gridColor = style.getPropertyValue('--border').trim()     || '#2A3441';
+
+    window.salesChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Ventas Reales',
+            data: [],
+            borderColor: brandSec,
+            backgroundColor: brandSec,
+            borderWidth: 2,
+            pointRadius: 4,
+            spanGaps: true,
+            tension: 0.3,
+          },
+          {
+            label: 'Tendencia (Regresión Lineal)',
+            data: [],
+            borderColor: accent,
+            borderWidth: 2,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: textMuted, font: { family: 'system-ui' } } },
+          tooltip: { mode: 'index', intersect: false },
+        },
+        scales: {
+          x: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textMuted } },
+          y: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textMuted } },
+        },
+      },
+    });
+  }
+
+  async function loadChartData() {
+    try {
+      const statsRes    = await fetch('/api/dashboard/stats?periodo=mes');
+      const statsData   = await statsRes.json();
+      const forecastRes = await fetch('/api/forecast/last_result');
+      const forecastData = forecastRes.ok ? await forecastRes.json() : null;
+
+      if (!window.salesChart) return;
+
+      const rawHistorical    = statsData?.grafico_principal?.tendencia_ventas || [];
+      const historicalPoints = rawHistorical.map(item => ({
+        label: item.periodo || item.mes || item.date || item.fecha || '',
+        value: parseFloat(item.total_ventas ?? item.amount ?? item.revenue ?? 0),
+      })).filter(p => p.label !== '');
+
+      const rawForecast    = forecastData?.forecast || [];
+      const forecastPoints = rawForecast.map(item => ({
+        label: item.date || '',
+        value: parseFloat(item.predicted_revenue ?? 0),
+      })).filter(p => p.label !== '');
+
+      const historicalLabels = historicalPoints.map(p => p.label);
+      const forecastLabels   = forecastPoints.map(p => p.label).filter(l => !historicalLabels.includes(l));
+      const allLabels        = [...historicalLabels, ...forecastLabels];
+
+      window.salesChart.data.labels            = allLabels;
+      window.salesChart.data.datasets[0].data  = allLabels.map(l => {
+        const f = historicalPoints.find(p => p.label === l); return f ? f.value : null;
+      });
+      window.salesChart.data.datasets[1].data  = allLabels.map(l => {
+        const f = forecastPoints.find(p => p.label === l); return f ? f.value : null;
+      });
+      window.salesChart.update();
+    } catch (err) {
+      console.warn('No se pudieron cargar datos de forecast:', err);
+    }
+  }
+
+  async function triggerPipeline() {
+    const btn          = document.getElementById('calc-pipeline-btn');
+    const originalHTML = btn.innerHTML;
+    btn.disabled       = true;
+    btn.innerHTML      = '<i class="ti ti-loader spin-anim"></i> Ejecutando...';
+    appendMessage('ai', '⏳ Iniciando pipeline de regresión lineal. Por favor, espera…');
+
+    try {
+      const res  = await fetch('/api/pipeline_forecast', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        appendMessage('ai', '✅ Pipeline de forecast ejecutado. Las predicciones están listas.');
+        await loadChartData();
+      } else {
+        appendMessage('ai', '❌ Error en pipeline de forecast: ' + (data.error || 'Error desconocido.'));
+      }
+    } catch (err) {
+      appendMessage('ai', '❌ No se pudo conectar con el backend para el forecast.');
+    } finally {
+      btn.disabled  = false;
+      btn.innerHTML = originalHTML;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // RFM — Carga y renderizado
+  // ═══════════════════════════════════════════════════════════════
+
+  function fmtCurrency(val) {
+    if (val == null || isNaN(val)) return '—';
+    if (val >= 1_000_000) return '$' + (val / 1_000_000).toFixed(1) + 'M';
+    if (val >= 1_000)     return '$' + val.toLocaleString('es-MX', { maximumFractionDigits: 0 });
+    return '$' + Number(val).toFixed(2);
+  }
+
+  async function loadRfmData() {
+    try {
+      const res = await fetch('/api/customers/last_result');
+      if (res.status === 404) return;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderRfmPanel(data);
+    } catch (err) {
+      console.warn('RFM data no disponible:', err);
+    }
+  }
+
+  /**
+   * Rellena el panel RFM con el reporte recibido del backend.
+   * Guarda los datos globalmente para permitir el filtrado posterior.
+   */
+  function renderRfmPanel(data) {
+    _rfmGlobalData = data;
+    _rfmActiveSeg  = 'all';
+
+    const summary  = data?.summary  || {};
+    const segments = data?.segments || {};
+    const topList  = data?.top_customers || [];
+
+    // ── KPIs ───────────────────────────────────────────────────────
+    _renderKpis(summary);
+
+    // ── Mostrar fila de filtros si hay datos ───────────────────────
+    const filterRow = document.getElementById('rfm-filter-row');
+    if (Object.keys(segments).length) {
+      filterRow.style.display = 'flex';
+      // Actualizar contador en chip "Todos"
+      const chipAll = filterRow.querySelector('[data-seg="all"]');
+      if (chipAll && summary.total_clients) {
+        chipAll.textContent = `Todos (${summary.total_clients.toLocaleString('es-MX')})`;
+      }
+      // Actualizar contadores en chips de segmento
+      Object.entries(segments).forEach(([key, seg]) => {
+        const chip = filterRow.querySelector(`[data-seg="${key}"]`);
+        if (chip && seg.client_count != null) {
+          // Conserva el icono si existe
+          const icon = chip.querySelector('i');
+          const cfg  = RFM_SEGMENTS[key] || {};
+          chip.innerHTML = (icon ? icon.outerHTML + ' ' : '') + `${cfg.label || key} (${seg.client_count})`;
+        }
+      });
+    }
+
+    // ── Barras de segmentos ────────────────────────────────────────
+    const container  = document.getElementById('rfm-segments-container');
+    const emptyState = document.getElementById('rfm-empty-state');
+
+    if (!Object.keys(segments).length) {
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    const total    = summary.total_clients || 1;
+    const segOrder = ['best_customers','loyal_customers','promising','at_risk','inactive','occasional'];
+    const barsHTML = segOrder
+      .filter(key => segments[key])
+      .map(key => {
+        const seg = segments[key];
+        const cfg = RFM_SEGMENTS[key] || { label: key, barClass: 'bar-occasional' };
+        const pct = ((seg.client_count / total) * 100).toFixed(1);
+        return `
+          <div class="rfm-seg-row" data-seg="${key}">
+            <span class="rfm-seg-name">${cfg.label}</span>
+            <div class="rfm-seg-bar-track">
+              <div class="rfm-seg-bar-fill ${cfg.barClass}" style="width:${pct}%"></div>
+            </div>
+            <span class="rfm-seg-count">${seg.client_count}</span>
+            <span class="rfm-seg-pct">${pct}%</span>
+          </div>`;
+      }).join('');
+
+    container.innerHTML = `<div class="rfm-segments">${barsHTML}</div>`;
+
+    // ── Tabla top clientes (vista inicial = todos) ─────────────────
+    _renderTable(topList, 'all', 1);
+  }
+
+  /** Actualiza los KPIs — puede recibir datos del summary global o de un segmento */
+  function _renderKpis(summary) {
+    document.getElementById('rfm-total-clients').textContent =
+      summary.total_clients != null ? summary.total_clients.toLocaleString('es-MX') : '—';
+    document.getElementById('rfm-total-revenue').textContent =
+      fmtCurrency(summary.total_revenue);
+    document.getElementById('rfm-avg-score').textContent =
+      summary.avg_rfm_score != null ? summary.avg_rfm_score.toFixed(2) : '—';
+  }
+
+  /**
+   * Renderiza la tabla de clientes.
+   * - Si segKey === 'all'  → muestra el top_customers global (sin paginar).
+   * - Si segKey es un seg  → muestra segments[segKey].clients con paginación.
+   */
+  function _renderTable(clientList, segKey, page) {
+    const tableContainer = document.getElementById('rfm-table-container');
+    if (!clientList || !clientList.length) {
+      tableContainer.innerHTML = '<p style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:13px;">Sin clientes en este segmento.</p>';
+      return;
+    }
+
+    const isAll      = !segKey || segKey === 'all';
+    const totalRows  = clientList.length;
+    const totalPages = isAll ? 1 : Math.ceil(totalRows / RFM_PAGE_SIZE);
+    const curPage    = isAll ? 1 : Math.max(1, Math.min(page || 1, totalPages));
+    const slice      = isAll
+      ? clientList
+      : clientList.slice((curPage - 1) * RFM_PAGE_SIZE, curPage * RFM_PAGE_SIZE);
+
+    // ── Encabezado de tabla ────────────────────────────────────────
+    const cfg   = !isAll ? (RFM_SEGMENTS[segKey] || {}) : {};
+    const color = !isAll ? _segColor(segKey) : 'var(--accent)';
+    const title = isAll  ? 'Top clientes (global)' : `${cfg.label || segKey}`;
+
+    const headerHTML = `
+      <div class="rfm-table-header">
+        <div class="rfm-table-title">
+          <span class="seg-dot" style="background:${color}"></span>
+          ${title}
+        </div>
+        <span class="rfm-table-count">
+          ${isAll ? `${totalRows} clientes` : `${totalRows} clientes · pág. ${curPage}/${totalPages}`}
+        </span>
+      </div>`;
+
+    // ── Filas ──────────────────────────────────────────────────────
+    const rowsHTML = slice.map(c => {
+      const segBadgeKey = c.segment || 'occasional';
+      const segLabel    = (RFM_SEGMENTS[segBadgeKey] || {}).label || segBadgeKey;
+      return `
+        <tr>
+          <td>${c.client_name || c.user_id || '—'}</td>
+          <td>${c.recency_days != null ? c.recency_days + 'd' : '—'}</td>
+          <td>${c.frequency   != null ? c.frequency              : '—'}</td>
+          <td>${fmtCurrency(c.monetary)}</td>
+          <td>${c.rfm_score   != null ? c.rfm_score              : '—'}</td>
+          ${isAll ? `<td><span class="seg-badge badge-${segBadgeKey}">${segLabel}</span></td>` : ''}
+        </tr>`;
+    }).join('');
+
+    // ── Paginación ─────────────────────────────────────────────────
+    let paginationHTML = '';
+    if (!isAll && totalPages > 1) {
+      const prevDisabled = curPage <= 1        ? 'disabled' : '';
+      const nextDisabled = curPage >= totalPages ? 'disabled' : '';
+      let pageButtons = '';
+
+      // Ventana de páginas: muestra hasta 7 botones centrados en curPage
+      const window_  = 3;
+      const start    = Math.max(1, curPage - window_);
+      const end      = Math.min(totalPages, curPage + window_);
+
+      if (start > 1) pageButtons += `<button class="rfm-page-btn" onclick="_rfmGoPage(1)">1</button>`;
+      if (start > 2) pageButtons += `<span class="rfm-page-info">…</span>`;
+      for (let p = start; p <= end; p++) {
+        pageButtons += `<button class="rfm-page-btn${p === curPage ? ' active' : ''}" onclick="_rfmGoPage(${p})">${p}</button>`;
+      }
+      if (end < totalPages - 1) pageButtons += `<span class="rfm-page-info">…</span>`;
+      if (end < totalPages)     pageButtons += `<button class="rfm-page-btn" onclick="_rfmGoPage(${totalPages})">${totalPages}</button>`;
+
+      paginationHTML = `
+        <div class="rfm-pagination">
+          <button class="rfm-page-btn" onclick="_rfmGoPage(${curPage - 1})" ${prevDisabled}>
+            <i class="ti ti-chevron-left" style="font-size:12px;"></i>
+          </button>
+          ${pageButtons}
+          <button class="rfm-page-btn" onclick="_rfmGoPage(${curPage + 1})" ${nextDisabled}>
+            <i class="ti ti-chevron-right" style="font-size:12px;"></i>
+          </button>
+        </div>`;
+    }
+
+    const extraTh = isAll ? '<th>Segmento</th>' : '';
+    tableContainer.innerHTML = `
+      ${headerHTML}
+      <div class="rfm-table-wrap">
+        <table class="rfm-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Recencia</th>
+              <th>Frecuencia</th>
+              <th>Revenue</th>
+              <th>Score</th>
+              ${extraTh}
+            </tr>
+          </thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </div>
+      ${paginationHTML}`;
+  }
+
+  /** Navega a la página indicada dentro del segmento activo */
+  function _rfmGoPage(page) {
+    _rfmCurrentPage = page;
+    if (!_rfmGlobalData) return;
+    const seg      = _rfmActiveSeg;
+    const segments = _rfmGlobalData?.segments || {};
+    const topList  = _rfmGlobalData?.top_customers || [];
+    const clients  = seg === 'all' ? topList : (segments[seg]?.clients || []);
+    _renderTable(clients, seg, page);
+    // Scroll suave al inicio de la tabla
+    document.getElementById('rfm-table-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Lógica de filtrado por segmento
+  // ═══════════════════════════════════════════════════════════════
+
+  /**
+   * Filtra el panel RFM al segmento seleccionado.
+   * La tabla carga la lista COMPLETA de clientes del segmento
+   * desde segments[segKey].clients (ya devuelta por el backend),
+   * con paginación de RFM_PAGE_SIZE filas por página.
+   */
+  function filterSegment(segKey, btn) {
+    if (!_rfmGlobalData) return;
+    _rfmActiveSeg   = segKey;
+    _rfmCurrentPage = 1;
+
+    // ── Activar chip correcto ──────────────────────────────────────
+    document.querySelectorAll('#rfm-filter-row .seg-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+
+    const segments = _rfmGlobalData?.segments || {};
+    const summary  = _rfmGlobalData?.summary  || {};
+    const topList  = _rfmGlobalData?.top_customers || [];
+
+    // ── Tarjeta descriptiva ────────────────────────────────────────
+    const detailBox = document.getElementById('rfm-seg-detail');
+    if (segKey === 'all') {
+      detailBox.classList.remove('visible');
+      detailBox.innerHTML = '';
+    } else {
+      const cfg  = RFM_SEGMENTS[segKey] || {};
+      const desc = RFM_DESCRIPTIONS[segKey] || '';
+      detailBox.style.borderLeftColor = _segColor(segKey);
+      detailBox.innerHTML = `<strong>${cfg.label || segKey}</strong>${desc}`;
+      detailBox.classList.add('visible');
+    }
+
+    // ── KPIs — muestra datos del segmento o del total ──────────────
+    if (segKey === 'all') {
+      _renderKpis(summary);
+    } else {
+      const seg = segments[segKey] || {};
+      _renderKpis({
+        total_clients: seg.client_count,
+        total_revenue: seg.total_revenue,
+        avg_rfm_score: seg.avg_rfm_score,
+      });
+    }
+
+    // ── Barras: atenuar las que no son el segmento activo ──────────
+    document.querySelectorAll('#rfm-segments-container .rfm-seg-row').forEach(row => {
+      if (segKey === 'all' || row.dataset.seg === segKey) {
+        row.classList.remove('dimmed');
+      } else {
+        row.classList.add('dimmed');
+      }
+    });
+
+    // ── Tabla: cargar lista completa del segmento ──────────────────
+    // 'all'  → top_customers global
+    // segKey → segments[segKey].clients (lista completa desde el backend)
+    const clients = segKey === 'all'
+      ? topList
+      : (segments[segKey]?.clients || []);
+
+    _renderTable(clients, segKey, 1);
+  }
+
+  /** Devuelve el color CSS del segmento para la tarjeta descriptiva */
+  function _segColor(segKey) {
+    const map = {
+      best_customers:  '#008103',
+      loyal_customers: '#3B82F6',
+      promising:       '#64f852',
+      at_risk:         '#EF4444',
+      inactive:        '#6B7280',
+      occasional:      '#dac43c',
+    };
+    return map[segKey] || 'var(--accent)';
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CUSTOMER PIPELINE
+  // ═══════════════════════════════════════════════════════════════
+
+  async function triggerCustomerPipeline() {
+    const btn          = document.getElementById('rfm-pipeline-btn');
+    const notice       = document.getElementById('rfm-running-notice');
+    const originalHTML = btn.innerHTML;
+    btn.disabled       = true;
+    btn.innerHTML      = '<i class="ti ti-loader spin-anim"></i> Iniciando…';
+    notice.style.display = 'flex';
+
+    appendMessage('ai', '⏳ Iniciando pipeline RFM de clientes en segundo plano…');
+
+    try {
+      const res  = await fetch('/api/pipeline_customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+
+      if (res.status === 202) {
+        appendMessage('ai', '✅ Pipeline RFM aceptado. Actualizando resultados cuando estén disponibles…');
+        let attempts = 0;
+        const poll = setInterval(async () => {
+          attempts++;
+          try {
+            const pollRes = await fetch('/api/customers/last_result');
+            if (pollRes.ok) {
+              clearInterval(poll);
+              notice.style.display = 'none';
+              btn.disabled         = false;
+              btn.innerHTML        = originalHTML;
+              const rfmData        = await pollRes.json();
+              renderRfmPanel(rfmData);
+              appendMessage('ai', `✅ Segmentación RFM lista. ${rfmData?.summary?.total_clients ?? '?'} clientes analizados.`);
+            }
+          } catch (_) { /* sigue intentando */ }
+          if (attempts >= 24) {
+            clearInterval(poll);
+            notice.style.display = 'none';
+            btn.disabled         = false;
+            btn.innerHTML        = originalHTML;
+            appendMessage('ai', '⚠️ El pipeline RFM está tardando más de lo esperado. Recarga la página en unos minutos.');
+          }
+        }, 5000);
+
+      } else {
+        notice.style.display = 'none';
+        btn.disabled         = false;
+        btn.innerHTML        = originalHTML;
+        appendMessage('ai', '❌ Error al iniciar el pipeline RFM: ' + (data.error || JSON.stringify(data)));
+      }
+
+    } catch (err) {
+      notice.style.display = 'none';
+      btn.disabled         = false;
+      btn.innerHTML        = originalHTML;
+      appendMessage('ai', '❌ No se pudo conectar con el backend para el pipeline RFM.');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // TEMA
+  // ═══════════════════════════════════════════════════════════════
+  function updateChartTheme() {
+    if (!window.salesChart) return;
+    const style = getComputedStyle(document.body);
+    window.salesChart.data.datasets[0].borderColor     = style.getPropertyValue('--brand-sec').trim();
+    window.salesChart.data.datasets[0].backgroundColor = style.getPropertyValue('--brand-sec').trim();
+    window.salesChart.data.datasets[1].borderColor     = style.getPropertyValue('--accent').trim();
+    window.salesChart.options.plugins.legend.labels.color = style.getPropertyValue('--text-muted').trim();
+    window.salesChart.options.scales.x.grid.color  = style.getPropertyValue('--border').trim();
+    window.salesChart.options.scales.x.ticks.color = style.getPropertyValue('--text-muted').trim();
+    window.salesChart.options.scales.y.grid.color  = style.getPropertyValue('--border').trim();
+    window.salesChart.options.scales.y.ticks.color = style.getPropertyValue('--text-muted').trim();
+    window.salesChart.update();
+  }
+
+  function toggleTheme() {
+    const html       = document.documentElement;
+    const newTheme   = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    document.querySelector('#theme-btn i').className = newTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+    localStorage.setItem('theme', newTheme);
+    setTimeout(updateChartTheme, 50);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════════════════════════════
+  window.addEventListener('DOMContentLoaded', async () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.querySelector('#theme-btn i').className = savedTheme === 'dark' ? 'ti ti-sun' : 'ti ti-moon';
+    }
+    initChart();
+    await Promise.allSettled([loadChartData(), loadRfmData()]);
+  });
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('closed');
+    document.getElementById('main-content').classList.toggle('expanded');
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // CHAT
+  // ═══════════════════════════════════════════════════════════════
+  const chatBox   = document.getElementById('chat-box');
+  const chatInput = document.getElementById('chat-input');
+  const sendBtn   = document.getElementById('send-btn');
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function handleEnter(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function appendMessage(sender, text) {
+    const wrapper       = document.createElement('div');
+    wrapper.className   = `msg-wrapper msg-${sender}`;
+    wrapper.innerHTML   = `<div class="msg-bubble">${text}</div>`;
+    chatBox.appendChild(wrapper);
+    chatBox.scrollTop   = chatBox.scrollHeight;
+  }
+
+  function showTypingIndicator() {
+    const w       = document.createElement('div');
+    w.className   = 'typing-indicator';
+    w.id          = 'typing-indicator';
+    w.innerHTML   = '<span></span><span></span><span></span>';
+    chatBox.appendChild(w);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    appendMessage('user', text);
+    chatInput.value       = '';
+    chatInput.style.height = 'auto';
+    chatInput.disabled    = true;
+    sendBtn.disabled      = true;
+    showTypingIndicator();
+
+    try {
+      const res  = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      });
+      const data = await res.json();
+      removeTypingIndicator();
+      if (res.ok && data.status === 'success') {
+        appendMessage('ai', data.reply);
+      } else {
+        appendMessage('ai', '❌ ' + (data.error || 'Error al procesar tu solicitud.'));
+      }
+    } catch (err) {
+      removeTypingIndicator();
+      appendMessage('ai', '❌ No se pudo conectar con el servidor. Verifica que Flask esté corriendo.');
+    } finally {
+      chatInput.disabled = false;
+      sendBtn.disabled   = false;
+      chatInput.focus();
+    }
+  }
+</script>
+</body>
+</html>
