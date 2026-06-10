@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation, Link } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, Link, Navigate } from 'react-router-dom';
 import { useSession } from '../../shared/hooks/useSession';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { useState, useEffect } from 'react';
@@ -43,26 +43,8 @@ useEffect(() => {
 
 const hasAdminAccess = session?.user?.roles?.includes('ADMIN') || session?.user?.roles?.includes('OWNER');
 
-  if (!session?.active || !hasAdminAccess) {
-    return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-bg-primary text-text-primary p-8">
-        <h1 className="text-3xl font-bold text-accent mb-4">🛑 Redirección Pausada (Debug)</h1>
-        <p className="mb-4 opacity-80">El sistema intentó patearte porque detectó que no tienes sesión o no eres ADMIN/OWNER.</p>
-        <div className="bg-bg-secondary p-6 rounded-lg border border-brand-primary/20 w-full max-w-2xl overflow-auto">
-          <h2 className="font-bold mb-2">Estado actual de useSession():</h2>
-          <pre className="text-sm font-mono text-brand-primary">
-            {JSON.stringify(session, null, 2)}
-          </pre>
-        </div>
-        <Link 
-          to="/login" 
-          state={{ from: location.pathname }}
-          className="text-brand-secondary hover:text-brand-primary underline transition-colors mt-6"
-        >
-          Forzar redirección manual al Login
-        </Link>
-      </div>
-    );
+ if (!session?.active || !hasAdminAccess) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   if (isLocked) {
