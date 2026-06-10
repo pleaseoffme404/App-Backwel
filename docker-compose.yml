@@ -216,8 +216,15 @@ services:
       api-gateway:
         condition: service_started
     environment:
-      - FRONTEND_URL=http://app-backwel:3000
       - API_GATEWAY_URL=http://api-gateway:8080
+      - FRONTEND_URL=http://app-backwel:3000
+      - host=host.docker.internal
+      - database=dataAi
+      - user=postgres
+      - password=pkl78loq
+      - port=5432
+    networks:
+      default: null
   app-backwel:
     build:
       context: ./app-backwel

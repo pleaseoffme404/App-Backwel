@@ -291,11 +291,11 @@ def _cargar_df_inteligente(archivo: str) -> pd.DataFrame:
             primeros_caracteres = f.read(150).strip()
 
         if primeros_caracteres.startswith('<?xml') or primeros_caracteres.startswith('<'):
-            logger.info("👁️ Sniffer: Detectado formato XML por contenido.")
+            logger.info(" Sniffer: Detectado formato XML por contenido.")
             return pd.read_xml(archivo)
 
         elif primeros_caracteres.startswith('[') or primeros_caracteres.startswith('{'):
-            logger.info("👁️ Sniffer: Detectado formato JSON por contenido.")
+            logger.info(" Sniffer: Detectado formato JSON por contenido.")
             return pd.read_json(archivo)
 
         else:
@@ -303,10 +303,10 @@ def _cargar_df_inteligente(archivo: str) -> pd.DataFrame:
                 primera_linea = f.readline()
 
             if '\t' in primera_linea:
-                logger.info("👁️ Sniffer: Detectado formato TXT (Tab-separated).")
+                logger.info(" Sniffer: Detectado formato TXT (Tab-separated).")
                 return pd.read_csv(archivo, sep='\t')
             else:
-                logger.info("👁️ Sniffer: Detectado formato CSV estándar.")
+                logger.info(" Sniffer: Detectado formato CSV estándar.")
                 return pd.read_csv(archivo)
 
     except Exception as e:
@@ -442,13 +442,17 @@ def run_pipeline_single_file(
 
     try:
         logger.info("▶ Procesando (modo COPY): %s", ruta)
-        with conn:
-            with conn.cursor() as cur:
-                _procesar_archivo_en_memoria(cur, str(ruta), parser, carpeta_salida)
+        with conn.cursor() as cur:
+            _procesar_archivo_en_memoria(cur, str(ruta), parser, carpeta_salida)
+        conn.commit()
         logger.info("✔ Pipeline completado: %s", ruta.name)
     except Exception as exc:
         logger.error("✖ Pipeline fallido '%s': %s", ruta.name, exc)
-        conn.rollback()
+        logger.error("  Causa raíz:", exc_info=True)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         raise
     finally:
         conn.close()
