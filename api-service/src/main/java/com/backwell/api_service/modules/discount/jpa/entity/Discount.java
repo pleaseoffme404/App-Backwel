@@ -64,10 +64,12 @@ public class Discount {
 
     @Setter(AccessLevel.NONE)
     @Column(nullable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant lastUpdate;
 
     @Setter(AccessLevel.NONE)
     @Column(nullable = false, updatable = false)
+    @JdbcTypeCode(Types.TIMESTAMP_WITH_TIMEZONE)
     private Instant createdAt;
 
     @PrePersist
