@@ -35,19 +35,21 @@ public class CategoryService {
                 .name(req.getCategoryName())
                 .build();
 
-        req.getParentId().ifPresent(i-> {
-            Category parent = categoryRepository.findById(i)
+        if (req.getParentId().isPresent()) {
+            UUID parentId = req.getParentId().get();
+            Category parent = categoryRepository.findById(parentId)
                     .orElseThrow(() -> new BusinessException(
-                            "Parent Category with ID: `%s` was not found.".formatted(i),
+                            "Parent Category with ID: `%s` was not found.".formatted(parentId),
                             CATEGORY_NOT_FOUND
                     ));
+
             parent.addChild(newCategory);
-        });
+        } else {
+            categoryRepository.save(newCategory);
+        }
 
-        Category saved =  categoryRepository.save(newCategory);
-        log.info("Saved Category with ID: `{}`", saved.getId());
-
-        return CategoryNodeDTO.fromEntity(saved);
+        log.info("Saved Category with ID: `{}`", newCategory.getId());
+        return CategoryNodeDTO.fromEntity(newCategory);
     }
 
     @Transactional
