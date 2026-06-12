@@ -6,8 +6,7 @@ export function Header() {
   const { session, isLoading } = useSession();
   const { theme, toggleTheme } = useTheme();
 
-  // Validación elástica: busca la palabra ADMIN dentro de cualquier rol que envíe Java
-  const isAdmin = session?.user?.roles?.some(role => role.toUpperCase().includes('ADMIN'));
+ const isAdmin = session?.user?.roles?.some(role => role.toUpperCase().includes('ADMIN') || role.toUpperCase().includes('OWNER'));
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-brand-primary/10 bg-bg-primary/80 backdrop-blur-md">
@@ -51,7 +50,7 @@ export function Header() {
           {!isLoading && (
             <>
               {!session?.active ? (
-                <a href="http://localhost:9000/login" className="bg-brand-primary text-bg-primary px-5 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity">
+                <a href="/login" className="bg-brand-primary text-bg-primary px-5 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity shadow-sm">
                   Iniciar Sesión
                 </a>
               ) : (

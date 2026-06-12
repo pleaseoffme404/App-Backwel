@@ -23,9 +23,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }: { children: React.Re
   if (isLoading) return <div className="min-h-screen bg-bg-primary flex items-center justify-center text-brand-primary font-bold">Cargando...</div>;
   if (!session?.active) return <Navigate to="/login" replace />;
   
-  if (requireAdmin) {
-    const isAdmin = session.user?.roles?.some(role => role.toUpperCase().includes('ADMIN'));
-    if (!isAdmin) return <Navigate to="/client/dashboard" replace />;
+ if (requireAdmin) {
+    const isAdmin = session.user?.roles?.some(role => role.toUpperCase().includes('ADMIN') || role.toUpperCase().includes('OWNER'));
+    if (!isAdmin) {
+      return <Navigate to="/client/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

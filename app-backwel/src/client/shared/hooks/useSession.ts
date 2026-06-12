@@ -57,8 +57,8 @@ export function useSession() {
                 email: user.email, 
                 avatar_url: user.pictureUrl, 
                 credits: 0, 
-                roles: user.role ? [user.role] : [] 
-              } 
+                roles: [user.role, user.roles, user.authorities].flat().filter(Boolean).join(',').split(',')
+              }
             };
           } catch (error) {
             return { active: false, needsOnboarding: false };
