@@ -1,51 +1,81 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { useSession } from '../../hooks/useSession';
-import { useBusiness } from '../../hooks/useBusiness';
+import { useTheme } from '../../hooks/useTheme';
 
 export function Header() {
-  const { session } = useSession();
-  const { business } = useBusiness();
-  const bName = business?.businessName || business?.business_name;
-  const bLogo = business?.logoUrl || business?.logo_url;
+  const { session, isLoading } = useSession();
+  const { theme, toggleTheme } = useTheme();
+
+  // Validación elástica: busca la palabra ADMIN dentro de cualquier rol que envíe Java
+  const isAdmin = session?.user?.roles?.some(role => role.toUpperCase().includes('ADMIN'));
 
   return (
-    <header className="bg-bg-primary border-b border-brand-primary/10 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-        <Link to="/" className="text-2xl font-black text-brand-primary tracking-tight flex items-center gap-3">
-          {bLogo && (
-            <img src={bLogo} alt="Logo" className="h-8 w-auto object-contain" />
-          )}
-          {bName ? (
-            <span>
-              {bName.split(' ')[0]} <span className="text-accent">{bName.split(' ').slice(1).join(' ')}</span>
-            </span>
-          ) : (
-            <span>BACKWEL <span className="text-accent">STORE</span></span>
-          )}
-        </Link>
-        
-        <nav className="hidden md:flex items-center gap-8">
-          <a href="#about" className="text-sm font-bold text-text-primary/70 hover:text-brand-primary transition-colors">Nosotros</a>
-          <a href="#featured" className="text-sm font-bold text-text-primary/70 hover:text-brand-primary transition-colors">Destacados</a>
-          <a href="#contacto" className="text-sm font-bold text-text-primary/70 hover:text-brand-primary transition-colors">Contacto</a>
-        </nav>
+    <header className="sticky top-0 z-50 w-full border-b border-brand-primary/10 bg-bg-primary/80 backdrop-blur-md">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          <a href="/" className="text-2xl font-black text-brand-primary tracking-tighter">
+            BACKWEL
+          </a>
+          <nav className="hidden md:flex items-center gap-6">
+            <a href="/" className="text-sm font-bold text-text-primary/70 hover:text-brand-primary transition-colors">Inicio</a>
+            <a href="/store" className="text-sm font-bold text-text-primary/70 hover:text-brand-primary transition-colors">Catálogo</a>
+          </nav>
+        </div>
 
-        <div className="flex items-center gap-4">
-          <Link 
-            to={session?.active ? "/admin/dashboard" : "/login"} 
-            className="text-sm font-bold text-text-primary/70 hover:text-brand-primary transition-colors"
-          >
-            {session?.active ? `Hola, ${session.user?.name || 'Admin'}` : 'Iniciar Sesión'}
-          </Link>
-          <Link 
-            to="/store" 
-            className="px-5 py-2.5 bg-brand-primary text-bg-primary font-bold rounded-lg hover:opacity-90 transition-all active:scale-95 text-sm"
-          >
-            Ir a la Tienda
-          </Link>
+        <div className="flex items-center gap-5">
+          
+          {/* From Uiverse.io by andrew-demchenk0 */}
+          <label className="switch">
+            <span className="sun">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <g fill="#ffd43b">
+                  <circle r="5" cy="12" cx="12"></circle>
+                  <path d="m21 13h-1a1 1 0 0 1 0-2h1a1 1 0 0 1 0 2zm-17 0h-1a1 1 0 0 1 0-2h1a1 1 0 0 1 0 2zm13.66-5.66a1 1 0 0 1 -.66-.29 1 1 0 0 1 0-1.41l.71-.71a1 1 0 1 1 1.41 1.41l-.71.71a1 1 0 0 1 -.75.29zm-12.02 12.02a1 1 0 0 1 -.71-.29 1 1 0 0 1 0-1.41l.71-.66a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1 -.7.24zm6.36-14.36a1 1 0 0 1 -1-1v-1a1 1 0 0 1 2 0v1a1 1 0 0 1 -1 1zm0 17a1 1 0 0 1 -1-1v-1a1 1 0 0 1 2 0v1a1 1 0 0 1 -1 1zm-5.66-14.66a1 1 0 0 1 -.7-.29l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41 1 1 0 0 1 -.71.29zm12.02 12.02a1 1 0 0 1 -.7-.29l-.66-.71a1 1 0 0 1 1.36-1.36l.71.71a1 1 0 0 1 0 1.41 1 1 0 0 1 -.71.24z"></path>
+                </g>
+              </svg>
+            </span>
+            <span className="moon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                <path d="m223.5 32c-123.5 0-223.5 100.3-223.5 224s100 224 223.5 224c60.6 0 115.5-24.2 155.8-63.4 5-4.9 6.3-12.5 3.1-18.7s-10.1-9.7-17-8.5c-9.8 1.7-19.8 2.6-30.1 2.6-96.9 0-175.5-78.8-175.5-176 0-65.8 36-123.1 89.3-153.3 6.1-3.5 9.2-10.5 7.7-17.3s-7.3-11.9-14.3-12.5c-6.3-.5-12.6-.8-19-.8z"></path>
+              </svg>
+            </span>   
+            <input 
+              type="checkbox" 
+              className="input" 
+              onChange={toggleTheme} 
+              checked={theme === 'dark'} 
+            />
+            <span className="slider"></span>
+          </label>
+          
+          {!isLoading && (
+            <>
+              {!session?.active ? (
+                <a href="http://localhost:9000/login" className="bg-brand-primary text-bg-primary px-5 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity">
+                  Iniciar Sesión
+                </a>
+              ) : (
+                <div className="flex items-center gap-3 ml-2">
+                  <span className="text-sm font-medium text-text-primary hidden md:block">
+                    Hola, {session.user?.name}
+                  </span>
+                  {isAdmin ? (
+                    <a href="/admin/dashboard" className="bg-accent text-white px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity shadow-sm">
+                      Panel Admin
+                    </a>
+                  ) : (
+                    <a href="/client/dashboard" className="bg-brand-secondary text-bg-primary px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-opacity shadow-sm">
+                      Mi Cuenta
+                    </a>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </header>
   );
 }
+
+export default Header;

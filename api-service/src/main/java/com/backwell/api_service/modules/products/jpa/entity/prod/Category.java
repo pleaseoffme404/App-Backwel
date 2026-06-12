@@ -49,10 +49,11 @@ public class Category {
         }
     }
 
-    public void setParent(Category parent) {
-        if (parent != null && parent.equals(this.parent)) {
+   public void setParent(Category parent) {
+        if (parent != null && this.id != null && parent.getId().equals(this.id)) {
             throw new IllegalArgumentException("Self-referencing categories are not Allowed");
         }
+        this.parent = parent;
     }
 
     @Builder

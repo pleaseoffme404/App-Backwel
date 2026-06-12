@@ -3,114 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <title>Login | Backwell</title>
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || 
+                        (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <style>
+        :root {
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --brand-primary: #38BDF8;
+            --brand-secondary: #7DD3FC;
+            --accent: #F97316;
+            --text-primary: #F8FAFC;
+        }
+
+        :root[data-theme='light'] {
+            --bg-primary: #F4F7FE;
+            --bg-secondary: #FFFFFF;
+            --brand-primary: #0A3C51;
+            --brand-secondary: #126385;
+            --accent: #E85D04;
+            --text-primary: #1A202C;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            transition: background-color 0.3s, color 0.3s;
         }
+        
         .login-container {
-            background-color: white;
-            padding: 30px;
+            background-color: var(--bg-secondary);
+            padding: 40px 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
             width: 350px;
         }
+        
         h2 {
             text-align: center;
-            color: #1c1e21;
-            margin-bottom: 25px;
+            color: var(--brand-primary);
+            margin-top: 0;
+            margin-bottom: 30px;
+            letter-spacing: -0.025em;
         }
+        
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
+        
         label {
             display: block;
             margin-bottom: 8px;
-            color: #4b4f56;
-            font-size: 14px;
+            color: var(--text-primary);
+            opacity: 0.8;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
+        
         input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #dddfe2;
-            border-radius: 6px;
+            padding: 12px 14px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+            border-radius: 8px;
             box-sizing: border-box;
             font-size: 14px;
+            transition: all 0.2s;
         }
+        
         input:focus {
             outline: none;
-            border-color: #1877f2;
-            box-shadow: 0 0 0 2px #e7f3ff;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-primary) 20%, transparent);
         }
+        
         .btn-submit {
             width: 100%;
-            padding: 12px;
-            background-color: #1877f2;
-            color: white;
+            padding: 14px;
+            background-color: var(--brand-primary);
+            color: var(--bg-primary);
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
             margin-top: 10px;
+            transition: opacity 0.2s, transform 0.1s;
         }
+        
         .btn-submit:hover {
-            background-color: #166fe5;
+            opacity: 0.9;
         }
 
-        /* Divisor "O" */
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
         .divider {
             display: flex;
             align-items: center;
             text-align: center;
-            margin: 20px 0;
-            color: #8d949e;
+            margin: 25px 0;
+            color: var(--text-primary);
+            opacity: 0.5;
+            font-size: 12px;
+            text-transform: uppercase;
         }
+        
         .divider::before, .divider::after {
             content: '';
             flex: 1;
-            border-bottom: 1px solid #dddfe2;
+            border-bottom: 1px solid color-mix(in srgb, var(--text-primary) 20%, transparent);
         }
-        .divider:not(:empty)::before { margin-right: .5em; }
-        .divider:not(:empty)::after { margin-left: .5em; }
+        
+        .divider:not(:empty)::before { margin-right: 1em; }
+        .divider:not(:empty)::after { margin-left: 1em; }
 
-        /* Botón Google */
         .btn-google {
             width: 100%;
-            padding: 10px;
-            background-color: white;
-            color: #5f6368;
-            border: 1px solid #dadce0;
-            border-radius: 6px;
+            padding: 12px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid color-mix(in srgb, var(--brand-primary) 30%, transparent);
+            border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 500;
             display: flex;
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            box-sizing: border-box;
         }
+        
         .btn-google:hover {
-            background-color: #f8f9fa;
-            border-color: #d2d4d7;
+            border-color: var(--brand-primary);
+            background-color: color-mix(in srgb, var(--brand-primary) 5%, var(--bg-primary));
         }
+        
         .btn-google img {
             width: 18px;
-            margin-right: 10px;
+            margin-right: 12px;
         }
 
-        .error { color: #fa3e3e; text-align: center; font-size: 14px; margin-bottom: 15px; }
-        .info { color: #28a745; text-align: center; font-size: 14px; margin-bottom: 15px; }
+        .error { 
+            color: #ef4444; 
+            background-color: color-mix(in srgb, #ef4444 10%, transparent);
+            border: 1px solid color-mix(in srgb, #ef4444 30%, transparent);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center; 
+            font-size: 14px; 
+            margin-bottom: 20px; 
+        }
+        
+        .info { 
+            color: #10b981; 
+            background-color: color-mix(in srgb, #10b981 10%, transparent);
+            border: 1px solid color-mix(in srgb, #10b981 30%, transparent);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center; 
+            font-size: 14px; 
+            margin-bottom: 20px; 
+        }
     </style>
 </head>
 <body>
 <div class="login-container">
-    <h2>BACKWELL AUTH SERVER</h2>
+    <h2>BACKWELL AUTH</h2>
 
     <div th:if="${param.error}" class="error">
         Credenciales inválidas. Inténtalo de nuevo.
@@ -137,7 +213,7 @@
     <div class="divider">o</div>
 
     <a th:href="@{/oauth2/authorization/google}" class="btn-google">
-        <img src= 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_"G"_logo.svg' alt="Google Logo">
+        <img src='https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_"G"_logo.svg' alt="Google Logo">
         Continuar con Google
     </a>
 </div>

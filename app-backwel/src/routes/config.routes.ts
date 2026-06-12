@@ -57,3 +57,32 @@ configRouter.post('/page', async (req, res) => {  try {
     res.status(500).json({ error: 'internal_error' });
   }
 });
+configRouter.get('/category-metadata', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT category_id, description FROM category_metadata');
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: 'db_error' });
+  }
+});
+
+configRouter.post('/category-metadata', async (req, res) => {
+  try {
+    const { categoryId, description } = req.body;
+    if (!categoryId) {
+      res.status(400).json({ error: 'bad_request' });
+      return;
+    }
+
+    await pool.query(
+      `INSERT INTO category_metadata (category_id, description) 
+       VALUES ($1, $2) 
+       ON CONFLICT (category_id) DO UPDATE SET description = EXCLUDED.description`,
+      [categoryId, description || '']
+    );
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'internal_error' });
+  }
+});

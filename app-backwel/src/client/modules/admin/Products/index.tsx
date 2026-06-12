@@ -9,6 +9,70 @@ interface ItemVariant {
   images: string[];
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  parentId?: string | null;
+  children?: Category[];
+}
+
+const buildCategoryTree = (flatCategories: any[]): Category[] => {
+  const tree: Category[] = [];
+  const lookup: Record<string, Category> = {};
+
+  flatCategories.forEach(cat => {
+    const id = cat.categoryId || cat.id;
+    lookup[id] = { ...cat, id, children: [] };
+  });
+
+  flatCategories.forEach(cat => {
+    const id = cat.categoryId || cat.id;
+    const item = lookup[id];
+    const parentId = cat.parentId;
+
+    if (parentId && lookup[parentId]) {
+      lookup[parentId].children?.push(item);
+    } else {
+      tree.push(item);
+    }
+  });
+
+  return tree;
+};
+
+const CategoryNodeItem = ({ category, level = 0 }: { category: Category, level?: number }) => (
+  <div className="flex flex-col w-full relative">
+    <div 
+      className="bg-bg-secondary p-4 rounded-xl border border-brand-primary/10 flex items-center justify-between hover:border-brand-primary/30 transition-colors my-1 relative z-10"
+      style={{ marginLeft: `${level * 2.5}rem` }}
+    >
+      {level > 0 && (
+        <>
+          <div className="absolute -left-6 top-1/2 w-6 h-px bg-brand-primary/20"></div>
+          <div className="absolute -left-6 -top-6 w-px h-[calc(100%+1.5rem)] bg-brand-primary/20"></div>
+        </>
+      )}
+      
+      <div className="flex flex-col">
+        <span className="font-bold text-lg text-brand-primary">{category.name}</span>
+        <span className="text-sm text-text-primary/60 line-clamp-1">{category.description || 'Sin descripción'}</span>
+      </div>
+      <span className="text-xs font-mono bg-bg-primary px-2 py-1 rounded text-text-primary/40 border border-brand-primary/10 select-all">
+        {category.id}
+      </span>
+    </div>
+    
+    {category.children && category.children.length > 0 && (
+      <div className="flex flex-col w-full">
+        {category.children.map(child => (
+          <CategoryNodeItem key={child.id} category={child} level={level + 1} />
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 export default function ProductosAdmin() {
   const [activeTab, setActiveTab] = useState('productos');
   const [categories, setCategories] = useState<any[]>([]);
@@ -19,14 +83,14 @@ export default function ProductosAdmin() {
   const [description, setDescription] = useState('');
   const [attributes, setAttributes] = useState<string[]>([]);
   const [newAttr, setNewAttr] = useState('');
-const [items, setItems] = useState<ItemVariant[]>([]);
+  const [items, setItems] = useState<ItemVariant[]>([]);
 
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [catName, setCatName] = useState('');
   const [catDescription, setCatDescription] = useState('');
   const [catParentId, setCatParentId] = useState('');
 
-const fetchCategories = async () => {
+  const fetchCategories = async () => {
     try {
       const res = await fetch('/api/v1/categories/');
       if (res.ok) {
@@ -41,7 +105,7 @@ const fetchCategories = async () => {
     fetchCategories();
   }, []);
 
-const handleCreateCategory = async (e: React.FormEvent) => {
+  const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await fetch('/api/v1/categories/', {
@@ -141,7 +205,7 @@ const handleCreateCategory = async (e: React.FormEvent) => {
     }
   };
 
-const renderCategorias = () => {
+  const renderCategorias = () => {
     if (isCreatingCategory) {
       return (
         <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 pb-12">
@@ -174,6 +238,10 @@ const renderCategorias = () => {
         </div>
       );
     }
+      useEffect(() => {
+    fetchCategories();
+  }, []);
+
 
     return (
       <div className="w-full flex flex-col gap-6">
@@ -194,16 +262,8 @@ const renderCategorias = () => {
               <p className="text-text-primary/60">Crea tu primera categoría raíz para empezar a ordenar tus productos.</p>
             </div>
           ) : (
-            categories.map((cat: any) => (
-              <div key={cat.categoryId || cat.id} className="bg-bg-secondary p-4 rounded-xl border border-brand-primary/10 flex items-center justify-between hover:border-brand-primary/30 transition-colors">
-                <div className="flex flex-col">
-                  <span className="font-bold text-lg text-brand-primary">{cat.name}</span>
-                  <span className="text-sm text-text-primary/60 line-clamp-1">{cat.description}</span>
-                </div>
-                <span className="text-xs font-mono bg-bg-primary px-2 py-1 rounded text-text-primary/40 border border-brand-primary/10 select-all">
-                  {cat.categoryId || cat.id}
-                </span>
-              </div>
+            buildCategoryTree(categories).map(cat => (
+              <CategoryNodeItem key={cat.id} category={cat} />
             ))
           )}
         </div>
