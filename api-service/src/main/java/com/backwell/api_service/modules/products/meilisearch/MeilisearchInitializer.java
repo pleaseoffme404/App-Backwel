@@ -20,11 +20,22 @@ public class MeilisearchInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         try {
             log.info("Starting Meilisearch initializer ...");
+            
+            try {
+                client.createIndex(IndexName.PRODUCTS.name(), "id");
+            } catch (Exception e) {
+                try {
+                    client.updateIndex(IndexName.PRODUCTS.name(), "id");
+                } catch (Exception ex) {
+                    client.deleteIndex(IndexName.PRODUCTS.name());
+                    client.createIndex(IndexName.PRODUCTS.name(), "id");
+                }
+            }
+
             Index index = client.index(IndexName.PRODUCTS.name());
 
-            // Settings for this index
             Settings settings = new Settings();
-            settings.setDistinctAttribute(IndexableProductDTO.Fields.productId);
+            settings.setDistinctAttribute("id");
             settings.setSearchableAttributes(new String[]{
                     IndexableProductDTO.Fields.name,
                     IndexableProductDTO.Fields.categoryHierarchy,
@@ -49,7 +60,6 @@ public class MeilisearchInitializer implements CommandLineRunner {
 
             TaskInfo task = index.updateSettings(settings);
             client.waitForTask(task.getTaskUid());
-
 
             log.info("Meilisearch configurado correctamente.");
 

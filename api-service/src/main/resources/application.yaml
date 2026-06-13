@@ -62,8 +62,8 @@ app:
     min-length: 10
 
   meilisearch:
-    host: ${MEILISEARCH_HOST:http://localhost:7700}
-    api-key: ${MEILISEARCH_MASTER_KEY:masterkey}
+    host: ${MEILI_HOST:http://localhost:7700}
+    api-key: ${MEILI_MASTER_KEY:masterkey}
     index:
       batch-size: 500
       poll-interval-millis: 300000

@@ -249,7 +249,7 @@ CREATE TABLE user_address
     postal_code                VARCHAR(10),
     country_code               VARCHAR(2)   NOT NULL,
     latitude                   DECIMAL(11, 8),
-    longitude                  DECIMAL(10, 8),
+    longitude                  DECIMAL(11, 8),
     CONSTRAINT pk_useraddress PRIMARY KEY (id)
 );
 

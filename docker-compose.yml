@@ -177,8 +177,8 @@ services:
       API_DB_PASSWORD: ${API_DB_PASSWORD}
       AUTH_SERVER_INTERNAL: http://auth-server:9000/auth
       EUREKA_SERVER: http://service-registry:8761/eureka/
-      MEILISEARCH_HOST: http://meilisearch:7700
-      MEILISEARCH_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
 
   email-service:
     build:

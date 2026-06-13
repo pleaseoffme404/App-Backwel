@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 
 interface ItemVariant {
   itemAttributes: Record<string, string>;
@@ -12,7 +13,7 @@ interface ItemVariant {
 interface Category {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   parentId?: string | null;
   children?: Category[];
 }
@@ -41,41 +42,12 @@ const buildCategoryTree = (flatCategories: any[]): Category[] => {
   return tree;
 };
 
-const CategoryNodeItem = ({ category, level = 0 }: { category: Category, level?: number }) => (
-  <div className="flex flex-col w-full relative">
-    <div 
-      className="bg-bg-secondary p-4 rounded-xl border border-brand-primary/10 flex items-center justify-between hover:border-brand-primary/30 transition-colors my-1 relative z-10"
-      style={{ marginLeft: `${level * 2.5}rem` }}
-    >
-      {level > 0 && (
-        <>
-          <div className="absolute -left-6 top-1/2 w-6 h-px bg-brand-primary/20"></div>
-          <div className="absolute -left-6 -top-6 w-px h-[calc(100%+1.5rem)] bg-brand-primary/20"></div>
-        </>
-      )}
-      
-      <div className="flex flex-col">
-        <span className="font-bold text-lg text-brand-primary">{category.name}</span>
-        <span className="text-sm text-text-primary/60 line-clamp-1">{category.description || 'Sin descripción'}</span>
-      </div>
-      <span className="text-xs font-mono bg-bg-primary px-2 py-1 rounded text-text-primary/40 border border-brand-primary/10 select-all">
-        {category.id}
-      </span>
-    </div>
-    
-    {category.children && category.children.length > 0 && (
-      <div className="flex flex-col w-full">
-        {category.children.map(child => (
-          <CategoryNodeItem key={child.id} category={child} level={level + 1} />
-        ))}
-      </div>
-    )}
-  </div>
-);
-
 export default function ProductosAdmin() {
   const [activeTab, setActiveTab] = useState('productos');
   const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  
+  // States for Product Management
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
@@ -85,24 +57,77 @@ export default function ProductosAdmin() {
   const [newAttr, setNewAttr] = useState('');
   const [items, setItems] = useState<ItemVariant[]>([]);
 
+  // States for Category Management
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [catName, setCatName] = useState('');
   const [catDescription, setCatDescription] = useState('');
   const [catParentId, setCatParentId] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/v1/categories/');
-      if (res.ok) {
-        const data = await res.json();
-        const normalized = data.map((c: any) => ({ ...c, name: c.categoryName || c.name }));
+      const [catRes, metaRes] = await Promise.all([
+        fetch('/api/v1/categories/'),
+        fetch('/api/config/category-metadata').catch(() => null)
+      ]);
+
+      if (catRes.ok) {
+        const data = await catRes.json();
+        let metadataMap: Record<string, string> = {};
+
+        if (metaRes && metaRes.ok) {
+          const metaData = await metaRes.json();
+          metaData.forEach((m: any) => {
+            metadataMap[m.category_id] = m.description;
+          });
+        }
+
+        const normalized = data.map((c: any) => ({
+          ...c,
+          name: c.categoryName || c.name,
+          description: metadataMap[c.categoryId || c.id] || ''
+        }));
         setCategories(normalized);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  
+  const fetchProducts = async () => {
+    try {
+      // Conexión directa a Meilisearch (Por defecto en el puerto 7700)
+      const meiliUrl = import.meta.env.VITE_MEILISEARCH_URL || 'http://localhost:7700';
+      const meiliKey = import.meta.env.VITE_MEILISEARCH_API_KEY || ''; 
+      
+      const res = await fetch(`${meiliUrl}/indexes/PRODUCTS/search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(meiliKey ? { 'Authorization': `Bearer ${meiliKey}` } : {})
+        },
+        body: JSON.stringify({
+          q: '', // Búsqueda vacía trae todos los documentos
+          limit: 50 // Límite para no saturar la vista inicial
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Meilisearch devuelve los resultados en el arreglo "hits"
+        setProducts(data.hits || []);
+      } else {
+        console.warn('Error de Meilisearch:', await res.text());
+      }
+    } catch (error) {
+      console.warn('Error conectando a Meilisearch. Asegúrate de que el contenedor esté corriendo en el puerto 7700.', error);
+    }
   };
 
   useEffect(() => {
     fetchCategories();
+    fetchProducts();
   }, []);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
@@ -116,18 +141,53 @@ export default function ProductosAdmin() {
           parentId: catParentId || null
         })
       });
+      
       if (res.ok) {
+        const newCat = await res.json();
+        const newCatId = newCat.categoryId || newCat.id;
+
+        if (newCatId && catDescription.trim()) {
+          await fetch('/api/config/category-metadata', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ categoryId: newCatId, description: catDescription })
+          }).catch(() => {});
+        }
+
+        Swal.fire({
+          title: '¡Éxito!',
+          text: 'Categoría creada correctamente.',
+          icon: 'success',
+          confirmButtonColor: '#38BDF8'
+        });
+
         setIsCreatingCategory(false);
         setCatName('');
         setCatDescription('');
         setCatParentId('');
         fetchCategories();
       } else {
-        alert('Error al crear la categoría. Revisa los datos.');
+        Swal.fire({
+          title: 'Error',
+          text: 'Error al crear la categoría. Revisa los datos.',
+          icon: 'error',
+          confirmButtonColor: '#38BDF8'
+        });
       }
     } catch (err) {
-      alert('Error de red al conectar con el servidor.');
+      Swal.fire({
+        title: 'Error de red',
+        text: 'Error al conectar con el servidor.',
+        icon: 'error',
+        confirmButtonColor: '#38BDF8'
+      });
     }
+  };
+
+  const handleNavigateToProducts = (catId: string) => {
+    setCategoryId(catId);
+    setSelectedCategory(null);
+    setActiveTab('productos');
   };
 
   const handleAddAttribute = (e: React.KeyboardEvent | React.MouseEvent) => {
@@ -173,13 +233,23 @@ export default function ProductosAdmin() {
     setItems(updated);
   };
 
-  const addImageField = (itemIndex: number) => {
+  
+
+const addImageField = (itemIndex: number) => {
     const updated = [...items];
     updated[itemIndex].images.push('');
     setItems(updated);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const removeImageField = (itemIndex: number, imgIndex: number) => {
+    const updated = [...items];
+    const newImages = [...updated[itemIndex].images];
+    newImages.splice(imgIndex, 1);
+    updated[itemIndex].images = newImages;
+    setItems(updated);
+  };
+
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { name, description, categoryId, brand, attributes, items };
     try {
@@ -189,6 +259,12 @@ export default function ProductosAdmin() {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
+        Swal.fire({
+          title: '¡Producto Creado!',
+          text: 'El producto y sus variantes han sido guardados.',
+          icon: 'success',
+          confirmButtonColor: '#38BDF8'
+        });
         setIsCreating(false);
         setItems([]);
         setAttributes([]);
@@ -198,12 +274,58 @@ export default function ProductosAdmin() {
         setCategoryId('');
       } else {
         const error = await res.json();
-        alert('Error al crear producto: ' + JSON.stringify(error));
+        let errorMsg = 'Error al crear producto.';
+        if (error.validationErrors) {
+           const details = Object.entries(error.validationErrors).map(([_, val]) => `• ${val}`).join('<br/>');
+           errorMsg = `Verifica los campos:<br/><div style="text-align: left; font-size: 0.9em; color: #ef4444;">${details}</div>`;
+        }
+        Swal.fire({
+          title: 'Error de Validación',
+          html: errorMsg,
+          icon: 'error',
+          confirmButtonColor: '#38BDF8'
+        });
       }
     } catch (err) {
-      alert('Error de red al conectar con el servidor.');
+      Swal.fire({
+        title: 'Error de red',
+        text: 'No se pudo contactar con el servidor.',
+        icon: 'error',
+        confirmButtonColor: '#38BDF8'
+      });
     }
   };
+  const CategoryNodeItem = ({ category, level = 0 }: { category: Category, level?: number }) => (    <div className="flex flex-col w-full relative">
+      <div 
+        onClick={() => setSelectedCategory(category)}
+        className="bg-bg-secondary p-4 rounded-xl border border-brand-primary/10 flex items-center justify-between hover:border-brand-primary cursor-pointer transition-colors my-1 relative z-10 shadow-sm"
+        style={{ marginLeft: `${level * 2.5}rem` }}
+      >
+        {level > 0 && (
+          <>
+            <div className="absolute -left-6 top-1/2 w-6 h-px bg-brand-primary/20"></div>
+            <div className="absolute -left-6 -top-6 w-px h-[calc(100%+1.5rem)] bg-brand-primary/20"></div>
+          </>
+        )}
+        
+        <div className="flex flex-col">
+          <span className="font-bold text-lg text-brand-primary">{category.name}</span>
+          <span className="text-sm text-text-primary/60 line-clamp-1">{category.description || 'Categoría base del sistema'}</span>
+        </div>
+        <span className="text-xs font-mono bg-bg-primary px-2 py-1 rounded text-text-primary/40 border border-brand-primary/10 hidden md:block">
+          {category.id}
+        </span>
+      </div>
+      
+      {category.children && category.children.length > 0 && (
+        <div className="flex flex-col w-full">
+          {category.children.map(child => (
+            <CategoryNodeItem key={child.id} category={child} level={level + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const renderCategorias = () => {
     if (isCreatingCategory) {
@@ -238,24 +360,20 @@ export default function ProductosAdmin() {
         </div>
       );
     }
-      useEffect(() => {
-    fetchCategories();
-  }, []);
-
 
     return (
-      <div className="w-full flex flex-col gap-6">
+      <div className="w-full flex flex-col gap-6 relative">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-black text-brand-primary tracking-tight">Categorías</h1>
-            <p className="text-text-primary/70">Organiza tu catálogo creando un árbol de categorías.</p>
+            <p className="text-text-primary/70">Selecciona una categoría para ver sus opciones.</p>
           </div>
           <button onClick={() => setIsCreatingCategory(true)} className="bg-brand-primary text-bg-primary px-6 py-3 rounded-lg font-bold hover:opacity-90 transition-opacity flex items-center gap-2">
             + Nueva Categoría
           </button>
         </div>
         
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 pb-8">
           {categories.length === 0 ? (
             <div className="bg-bg-secondary border border-brand-primary/20 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[200px]">
               <h3 className="text-xl font-bold text-text-primary mb-2">Aún no hay categorías</h3>
@@ -267,6 +385,48 @@ export default function ProductosAdmin() {
             ))
           )}
         </div>
+
+        {selectedCategory && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-bg-secondary w-full max-w-lg rounded-2xl shadow-2xl border border-brand-primary/20 overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-brand-primary/10 flex justify-between items-center bg-bg-primary">
+                <div>
+                  <h3 className="text-2xl font-black text-brand-primary">{selectedCategory.name}</h3>
+                  <p className="text-xs font-mono text-text-primary/40 mt-1">ID: {selectedCategory.id}</p>
+                </div>
+                <button onClick={() => setSelectedCategory(null)} className="text-text-primary/40 hover:text-accent font-black text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-accent/10 transition-colors">&times;</button>
+              </div>
+              
+              <div className="p-6 flex flex-col gap-4">
+                <p className="text-text-primary/70 text-sm">
+                  {selectedCategory.description || 'Esta categoría está activa y disponible en el catálogo.'}
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                  <button 
+                    onClick={() => handleNavigateToProducts(selectedCategory.id)}
+                    className="flex flex-col items-center justify-center p-4 bg-brand-primary/10 border border-brand-primary/30 rounded-xl hover:bg-brand-primary hover:text-bg-primary text-brand-primary transition-all group"
+                  >
+                    <span className="font-bold text-lg mb-1">Ver Productos</span>
+                    <span className="text-xs opacity-70 group-hover:opacity-100">Gestionar catálogo</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      setIsCreatingCategory(true);
+                      setCatParentId(selectedCategory.id);
+                      setSelectedCategory(null);
+                    }}
+                    className="flex flex-col items-center justify-center p-4 bg-bg-primary border border-brand-primary/20 rounded-xl hover:border-brand-primary text-text-primary transition-all"
+                  >
+                    <span className="font-bold text-lg mb-1 text-brand-secondary">Añadir Subcategoría</span>
+                    <span className="text-xs opacity-70">Crear nodo hijo</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -287,6 +447,11 @@ export default function ProductosAdmin() {
 
   const renderProductos = () => {
     if (!isCreating) {
+      // Filtrar productos si se seleccionó una categoría (Meilisearch guarda el categoryId)
+      const displayedProducts = categoryId 
+        ? products.filter(p => p.categoryId === categoryId)
+        : products;
+
       return (
         <div className="w-full flex flex-col gap-6">
           <div className="flex items-center justify-between">
@@ -296,15 +461,43 @@ export default function ProductosAdmin() {
             </div>
             <button 
               onClick={() => setIsCreating(true)}
-              className="bg-brand-primary text-bg-primary px-6 py-3 rounded-lg font-bold hover:opacity-90 transition-opacity flex items-center gap-2"
+              className="bg-brand-primary text-bg-primary px-6 py-3 rounded-lg font-bold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm"
             >
               + Nuevo Producto
             </button>
           </div>
-          <div className="bg-bg-secondary border border-brand-primary/20 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
-            <h3 className="text-xl font-bold text-text-primary mb-2">Aún no hay productos</h3>
-            <p className="text-text-primary/60 max-w-md">Crea tu primer producto para empezar a gestionar el inventario.</p>
-          </div>
+
+          {categoryId && (
+            <div className="bg-brand-secondary/10 border border-brand-secondary/30 text-brand-secondary px-4 py-3 rounded-lg flex items-center justify-between">
+              <span className="font-bold text-sm">Filtrando por categoría ID: <span className="font-mono bg-bg-primary px-2 py-0.5 rounded ml-2 text-xs">{categoryId}</span></span>
+              <button onClick={() => setCategoryId('')} className="text-xs hover:underline font-bold">Limpiar Filtro</button>
+            </div>
+          )}
+
+          {displayedProducts.length === 0 ? (
+            <div className="bg-bg-secondary border border-brand-primary/20 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+              <h3 className="text-xl font-bold text-text-primary mb-2">
+                {products.length === 0 ? 'Aún no hay productos indexados' : 'No hay productos en esta categoría'}
+              </h3>
+              <p className="text-text-primary/60 max-w-md">Si acabas de crear un producto, puede tardar un par de segundos en aparecer mientras Meilisearch lo indexa.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displayedProducts.map((prod) => (
+                <div key={prod.id || prod.productId} className="bg-bg-secondary border border-brand-primary/10 rounded-xl p-4 flex flex-col gap-2 hover:border-brand-primary/30 transition-colors shadow-sm relative group overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-brand-primary text-bg-primary text-[10px] font-black px-2 py-1 rounded-bl-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    INDEXADO
+                  </div>
+                  <h3 className="font-bold text-lg text-text-primary truncate">{prod.name}</h3>
+                  <span className="text-xs text-brand-primary font-bold uppercase tracking-wide">{prod.brand}</span>
+                  <p className="text-sm text-text-primary/70 line-clamp-2">{prod.description}</p>
+                  <div className="mt-2 text-[10px] font-mono bg-bg-primary p-2 rounded text-text-primary/50 break-all border border-brand-primary/5">
+                    ID: {prod.id || prod.productId}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -408,14 +601,33 @@ export default function ProductosAdmin() {
                   </div>
                 </div>
 
-                <div className="border-t border-brand-primary/10 pt-4 flex flex-col gap-2">
+                <div className="border-t border-brand-primary/10 pt-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-text-primary/70 uppercase">URLs de Imágenes</label>
-                    <button type="button" onClick={() => addImageField(idx)} className="text-xs text-brand-primary font-bold hover:underline">+ Añadir Imagen</button>
+                    <label className="text-xs font-bold text-text-primary/70 uppercase">Imágenes de la variante</label>
+                    <button type="button" onClick={() => addImageField(idx)} className="text-xs text-brand-primary font-bold hover:underline">+ Añadir Otra Imagen</button>
                   </div>
-                  {item.images.map((img, imgIdx) => (
-                    <input key={imgIdx} type="url" required value={img} onChange={e => updateItemImage(idx, imgIdx, e.target.value)} className="p-2 bg-bg-secondary border border-brand-primary/20 rounded text-sm text-text-primary outline-none focus:border-brand-primary w-full" placeholder="https://..." />
-                  ))}
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    {item.images.map((img, imgIdx) => (
+                      <div key={imgIdx} className="flex items-start gap-4 p-3 bg-bg-secondary border border-brand-primary/10 rounded-lg">
+                        <div className="w-20 h-20 shrink-0 bg-bg-primary rounded border border-brand-primary/20 flex items-center justify-center overflow-hidden">
+                          {img ? (
+                            <img src={img} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          ) : (
+                            <span className="text-xs text-text-primary/30">Preview</span>
+                          )}
+                        </div>
+                        <div className="flex-1 flex flex-col gap-2">
+                          <input type="url" required value={img} onChange={e => updateItemImage(idx, imgIdx, e.target.value)} className="p-2 bg-bg-primary border border-brand-primary/20 rounded text-sm text-text-primary outline-none focus:border-brand-primary w-full" placeholder="https://ejemplo.com/imagen.jpg" />
+                          {item.images.length > 1 && (
+                            <button type="button" onClick={() => removeImageField(idx, imgIdx)} className="text-xs text-accent font-bold self-start hover:underline">
+                              Quitar Imagen
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}

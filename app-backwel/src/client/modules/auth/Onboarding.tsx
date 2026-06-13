@@ -180,14 +180,14 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
               <div className="p-4 bg-bg-primary border border-brand-primary/20 rounded-lg text-sm flex flex-col gap-3 mt-2 transition-all">
                 <span className="font-bold text-brand-primary text-xs uppercase tracking-wide">Verifica los datos obtenidos:</span>
                 
-                <input required type="text" placeholder="Calle" value={addressData.route} onChange={e => setAddressData({...addressData, route: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary" />
+                <input required type="text" placeholder="Calle" value={addressData.route} onChange={e => setAddressData({...addressData, route: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary text-text-primary" />
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <input required type="text" placeholder="No. Ext/Int" value={addressData.streetNumber} onChange={e => setAddressData({...addressData, streetNumber: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary" />
-                  <input required type="text" placeholder="C.P." value={addressData.postalCode} onChange={e => setAddressData({...addressData, postalCode: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary" />
+                  <input required type="text" placeholder="No. Ext/Int" value={addressData.streetNumber} onChange={e => setAddressData({...addressData, streetNumber: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary text-text-primary" />
+                  <input required type="text" placeholder="C.P." value={addressData.postalCode} onChange={e => setAddressData({...addressData, postalCode: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary text-text-primary" />
                 </div>
                 
-                <input required type="text" placeholder="Ciudad / Municipio" value={addressData.locality} onChange={e => setAddressData({...addressData, locality: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary" />
+                <input required type="text" placeholder="Ciudad / Municipio" value={addressData.locality} onChange={e => setAddressData({...addressData, locality: e.target.value})} className="p-2 bg-bg-secondary border border-brand-primary/10 rounded w-full outline-none focus:border-brand-primary text-text-primary" />
                 
                 <span className="text-[10px] text-text-primary/40 mt-1 italic">
                   *Si Google no encontró tu número exterior o código postal, escríbelos manualmente arriba.

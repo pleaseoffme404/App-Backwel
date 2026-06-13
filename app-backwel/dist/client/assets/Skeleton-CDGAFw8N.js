@@ -1,1 +1,0 @@
-import{d as e,n as t}from"./index-DqMPKrWA.js";e();var n=t();function r({className:e=``,...t}){return(0,n.jsx)(`div`,{className:`relative overflow-hidden bg-bg-secondary rounded-md ${e}`,...t,children:(0,n.jsx)(`div`,{className:`absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-text-primary/10 to-transparent`})})}export{r as t};

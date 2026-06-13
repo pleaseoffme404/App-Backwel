@@ -36,6 +36,6 @@ public class GoogleAddress {
     @Column(precision = 11,scale = 8)
     private BigDecimal latitude;
 
-    @Column(precision = 10, scale = 8)
+    @Column(precision = 11, scale = 8)
     private BigDecimal longitude;
 }

@@ -123,7 +123,7 @@ public class AsyncSearchIndexingService {
             log.info("[Meilsiearch] Indexing {} documents...", items.size());
             String json = mapper.writeValueAsString(items);
 
-            TaskInfo taskInfo = index.addDocuments(json);
+            TaskInfo taskInfo = index.addDocuments(json, "id");
 
             client.waitForTask(taskInfo.getTaskUid());
             Task task = client.getTask(taskInfo.getTaskUid());
