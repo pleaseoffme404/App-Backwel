@@ -46,6 +46,16 @@ export default function ProductosAdmin() {
   const [activeTab, setActiveTab] = useState('productos');
   const [categories, setCategories] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+
+  // States for Discount Management
+  const [discounts, setDiscounts] = useState<any[]>([]);
+  const [isCreatingDiscount, setIsCreatingDiscount] = useState(false);
+  const [descName, setDescName] = useState('');
+  const [descPercent, setDescPercent] = useState<number>(10);
+  const [descStackable, setDescStackable] = useState(false);
+  const [descStartDate, setDescStartDate] = useState('');
+  const [descEndDate, setDescEndDate] = useState('');
+  const [descTargetCategory, setDescTargetCategory] = useState('');
   
   // States for Product Management
   const [isCreating, setIsCreating] = useState(false);
@@ -53,10 +63,15 @@ export default function ProductosAdmin() {
   const [brand, setBrand] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
-  const [attributes, setAttributes] = useState<string[]>([]);
+const [attributes, setAttributes] = useState<string[]>([]);
   const [newAttr, setNewAttr] = useState('');
-  const [items, setItems] = useState<ItemVariant[]>([]);
-
+ const [items, setItems] = useState<ItemVariant[]>([]);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<any | null>(null);
+  const [stockChangeAmount, setStockChangeAmount] = useState<number>(0);
+  const [stockChangeType, setStockChangeType] = useState<'ADD' | 'REMOVE'>('ADD');
   // States for Category Management
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [catName, setCatName] = useState('');
@@ -95,40 +110,172 @@ export default function ProductosAdmin() {
   };
 
   
-  const fetchProducts = async () => {
+const fetchProducts = async () => {
     try {
-      // Conexión directa a Meilisearch (Por defecto en el puerto 7700)
       const meiliUrl = import.meta.env.VITE_MEILISEARCH_URL || 'http://localhost:7700';
-      const meiliKey = import.meta.env.VITE_MEILISEARCH_API_KEY || ''; 
+      const meiliKey = import.meta.env.VITE_MEILISEARCH_API_KEY || 'C8ntQZrkHab2NuAOJlZtzi2399jOplWfL1YeOJ3Oq2l'; 
       
       const res = await fetch(`${meiliUrl}/indexes/PRODUCTS/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(meiliKey ? { 'Authorization': `Bearer ${meiliKey}` } : {})
+          'Authorization': `Bearer ${meiliKey}`
         },
         body: JSON.stringify({
-          q: '', // Búsqueda vacía trae todos los documentos
-          limit: 50 // Límite para no saturar la vista inicial
+          q: '', 
+          limit: 100 
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        // Meilisearch devuelve los resultados en el arreglo "hits"
         setProducts(data.hits || []);
       } else {
-        console.warn('Error de Meilisearch:', await res.text());
+        console.warn(await res.text());
       }
     } catch (error) {
-      console.warn('Error conectando a Meilisearch. Asegúrate de que el contenedor esté corriendo en el puerto 7700.', error);
+      console.warn(error);
+    }
+  };
+  const fetchDiscounts = async () => {
+    try {
+      const res = await fetch('/api/v1/discounts/search');
+      if (res.ok) {
+        const data = await res.json();
+        setDiscounts(data.content || []);
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  useEffect(() => {
+  const handleAdjustInventory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInventoryItem || stockChangeAmount <= 0) return;
+
+    const multiplier = stockChangeType === 'ADD' ? 1 : -1;
+    const delta = stockChangeAmount * multiplier;
+
+    const payload = {
+        itemId: selectedInventoryItem.id || selectedInventoryItem.itemId,
+        availableDelta: delta,
+        reservedDelta: 0,
+        redundancyDelta: 0,
+        physicalDelta: delta
+    };
+
+    try {
+        const res = await fetch(`/api/v1/inventory/adjust`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            import('sweetalert2').then(({ default: Swal }) => Swal.fire('¡Stock Actualizado!', `Se han ${stockChangeType === 'ADD' ? 'añadido' : 'retirado'} ${stockChangeAmount} unidades físicamente.`, 'success'));
+            setSelectedInventoryItem(null);
+            setStockChangeAmount(0);
+        } else {
+            import('sweetalert2').then(({ default: Swal }) => Swal.fire('Endpoint faltante', 'Pide a tu Dev de Java que termine el endpoint POST /inventory/adjust recibiendo InventoryDeltaRequest', 'info'));
+        }
+    } catch(err) {
+        console.error(err);
+    }
+  };
+
+
+useEffect(() => {
     fetchCategories();
     fetchProducts();
+    fetchDiscounts();
   }, []);
+
+  const fetchProductDetails = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/products/?productId=${id}`);
+      if (res.ok) {
+        const fullProduct = await res.json();
+        setEditingProduct(fullProduct);
+      } else {
+        import('sweetalert2').then(({ default: Swal }) => Swal.fire('Error', 'No se pudo cargar el detalle del producto desde la base principal', 'error'));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateProductBasicInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    try {
+      const res = await fetch(`/api/v1/products/?productId=${editingProduct.productId || editingProduct.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingProduct.name,
+          brand: editingProduct.brand,
+          description: editingProduct.description
+        })
+      });
+      if (res.ok) {
+        import('sweetalert2').then(({ default: Swal }) => Swal.fire('Actualizado', 'Información base guardada.', 'success'));
+        setIsEditingInfo(false);
+        fetchProducts(); // Refrescar catálogo indexado
+        const updated = await res.json();
+        setEditingProduct(updated);
+      } else {
+        import('sweetalert2').then(({ default: Swal }) => Swal.fire('Error', 'No se pudo actualizar', 'error'));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!descTargetCategory) {
+      import('sweetalert2').then(({ default: Swal }) => Swal.fire('Error', 'Selecciona una categoría objetivo', 'error'));
+      return;
+    }
+
+    const payload = {
+      discountName: descName,
+      stackable: descStackable,
+      discountDecimal: descPercent / 100,
+      startDate: new Date(descStartDate).toISOString(),
+      endDate: new Date(descEndDate).toISOString(),
+      targets: {
+        itemTargets: [],
+        productTargets: [],
+        categoryTargets: [descTargetCategory]
+      }
+    };
+
+    try {
+      const res = await fetch('/api/v1/discounts/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        import('sweetalert2').then(({ default: Swal }) => Swal.fire('¡Éxito!', 'Descuento promocional activado.', 'success'));
+        setIsCreatingDiscount(false);
+        setDescName('');
+        setDescPercent(10);
+        setDescStackable(false);
+        setDescStartDate('');
+        setDescEndDate('');
+        setDescTargetCategory('');
+        fetchDiscounts();
+      } else {
+        const err = await res.json();
+        import('sweetalert2').then(({ default: Swal }) => Swal.fire('Error de validación', err.message || 'Verifica las fechas y datos', 'error'));
+      }
+    } catch (error) {
+      import('sweetalert2').then(({ default: Swal }) => Swal.fire('Error de red', 'No se pudo contactar al servidor', 'error'));
+    }
+  };
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -431,19 +578,243 @@ const addImageField = (itemIndex: number) => {
     );
   };
 
-  const renderDescuentos = () => (
-    <div className="flex flex-col items-center justify-center h-full text-text-primary/50">
-      <h2 className="text-2xl font-bold mb-2 text-brand-primary">Gestión de Descuentos</h2>
-      <p>Módulo en construcción.</p>
-    </div>
-  );
+const renderDescuentos = () => {
+    if (isCreatingDiscount) {
+      return (
+        <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 pb-12">
+          <div className="flex items-center justify-between border-b border-brand-primary/10 pb-4">
+            <h1 className="text-3xl font-black text-brand-primary tracking-tight">Nuevo Descuento Promocional</h1>
+            <button onClick={() => setIsCreatingDiscount(false)} className="text-text-primary/60 hover:text-accent font-medium">Cancelar</button>
+          </div>
 
-  const renderInventario = () => (
-    <div className="flex flex-col items-center justify-center h-full text-text-primary/50">
-      <h2 className="text-2xl font-bold mb-2 text-brand-primary">Gestión de Inventario</h2>
-      <p>Módulo en construcción.</p>
-    </div>
-  );
+          <form onSubmit={handleCreateDiscount} className="bg-bg-secondary p-6 rounded-xl border border-brand-primary/20 flex flex-col gap-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-text-primary/70 uppercase">Nombre de la Promoción</label>
+                <input type="text" required value={descName} onChange={e => setDescName(e.target.value)} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary" placeholder="Ej: Hot Sale 2026" />
+              </div>
+              
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-text-primary/70 uppercase">Porcentaje de Descuento (%)</label>
+                <input type="number" min="1" max="99" required value={descPercent} onChange={e => setDescPercent(Number(e.target.value))} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-text-primary/70 uppercase">Fecha de Inicio</label>
+                <input type="datetime-local" required value={descStartDate} onChange={e => setDescStartDate(e.target.value)} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-text-primary/70 uppercase">Fecha de Fin</label>
+                <input type="datetime-local" required value={descEndDate} onChange={e => setDescEndDate(e.target.value)} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary" />
+              </div>
+
+              <div className="flex flex-col gap-1 md:col-span-2">
+                <label className="text-xs font-bold text-text-primary/70 uppercase">Categoría Objetivo (Se aplica a todos sus productos)</label>
+                <select required value={descTargetCategory} onChange={e => setDescTargetCategory(e.target.value)} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary">
+                  <option value="" disabled>Selecciona la categoría a descontar...</option>
+                  {categories.map((cat: any) => (
+                    <option key={cat.categoryId || cat.id} value={cat.categoryId || cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3 md:col-span-2 mt-2 bg-brand-primary/5 p-4 rounded-lg border border-brand-primary/10">
+                <input type="checkbox" id="stackable" checked={descStackable} onChange={e => setDescStackable(e.target.checked)} className="w-5 h-5 accent-brand-primary rounded" />
+                <label htmlFor="stackable" className="text-sm font-bold text-brand-primary cursor-pointer select-none">
+                  Descuento Apilable (Permitir que el cliente use cupones extra sobre este descuento)
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" className="mt-4 w-full py-4 bg-brand-primary text-bg-primary font-black text-lg rounded-xl hover:opacity-90 transition-all shadow-xl shadow-brand-primary/20">
+              Crear Regla de Descuento
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-brand-primary tracking-tight">Gestión de Descuentos</h1>
+            <p className="text-text-primary/70">Visualiza y configura reducciones de precio programadas.</p>
+          </div>
+          <button onClick={() => setIsCreatingDiscount(true)} className="bg-brand-primary text-bg-primary px-6 py-3 rounded-lg font-bold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-sm">
+            + Nuevo Descuento
+          </button>
+        </div>
+
+        {discounts.length === 0 ? (
+          <div className="bg-bg-secondary border border-brand-primary/20 rounded-xl p-8 text-center flex flex-col items-center justify-center min-h-[400px]">
+            <h3 className="text-xl font-bold text-text-primary mb-2">Aún no hay descuentos</h3>
+            <p className="text-text-primary/60 max-w-md">Crea tu primera promoción temporal para impulsar las ventas en una categoría.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {discounts.map((disc, idx) => (
+              <div key={idx} className="bg-bg-secondary border border-brand-primary/10 rounded-xl p-5 flex flex-col gap-3 relative overflow-hidden group hover:border-brand-primary/40 transition-colors">
+                <div className={`absolute top-0 right-0 text-[10px] font-black px-2 py-1 rounded-bl-lg ${disc.active ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                  {disc.active ? 'ACTIVO' : 'INACTIVO'}
+                </div>
+                <h3 className="font-black text-xl text-brand-primary pr-12 truncate">{disc.name}</h3>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-3xl font-black text-accent">-{(disc.decimalValue * 100).toFixed(0)}%</span>
+                  {disc.stackable && <span className="bg-brand-primary/10 text-brand-primary text-[10px] font-black px-2 py-1 rounded">APILABLE</span>}
+                </div>
+                
+                <div className="flex flex-col gap-1 text-xs text-text-primary/70 bg-bg-primary p-3 rounded-lg border border-brand-primary/5 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold">Inicia:</span>
+                    <span>{new Date(disc.startDate).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold">Termina:</span>
+                    <span>{new Date(disc.endDate).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  const renderInventario = () => {
+    const searchTerm = inventorySearch.toLowerCase().trim();
+    let matchingItems: any[] = [];
+
+    if (searchTerm) {
+      products.forEach(prod => {
+        if (prod.items) {
+          prod.items.forEach((item: any) => {
+            if (
+              item.sku?.toLowerCase().includes(searchTerm) || 
+              prod.name?.toLowerCase().includes(searchTerm) || 
+              item.id?.toLowerCase().includes(searchTerm)
+            ) {
+              matchingItems.push({
+                ...item,
+                productName: prod.name,
+                brand: prod.brand
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return (
+      <div className="w-full flex flex-col gap-6">
+        <div className="flex items-center justify-between border-b border-brand-primary/10 pb-4">
+          <div>
+            <h1 className="text-3xl font-black text-brand-primary tracking-tight">Ajustes de Inventario Físico</h1>
+            <p className="text-text-primary/70">Registra entradas manuales o mermas de stock.</p>
+          </div>
+        </div>
+
+        {!selectedInventoryItem ? (
+          <div className="bg-bg-secondary border border-brand-primary/20 rounded-xl p-6 shadow-sm flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-text-primary/70 uppercase">Buscar Variante</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={inventorySearch} 
+                  onChange={e => setInventorySearch(e.target.value)} 
+                  className="flex-1 p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary" 
+                  placeholder="Escribe el SKU, ID o nombre del producto..." 
+                />
+              </div>
+            </div>
+
+            {searchTerm && matchingItems.length === 0 && (
+              <p className="text-center text-text-primary/50 py-4 font-bold">No se encontraron variantes con esa búsqueda.</p>
+            )}
+
+            {matchingItems.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {matchingItems.map((item, idx) => (
+                  <div key={idx} onClick={() => setSelectedInventoryItem(item)} className="bg-bg-primary border border-brand-primary/10 rounded-xl p-4 flex flex-col gap-2 hover:border-brand-primary/50 transition-colors shadow-sm cursor-pointer group">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-brand-primary truncate">{item.productName}</h3>
+                        <p className="text-xs font-bold text-text-primary/50 uppercase">{item.brand}</p>
+                      </div>
+                      <span className="bg-brand-primary/10 text-brand-primary px-2 py-1 rounded text-xs font-mono font-bold">SKU: {item.sku}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {item.attributes && Object.entries(item.attributes).map(([k, v]) => (
+                        <span key={k} className="text-[10px] bg-bg-secondary border border-brand-primary/10 px-2 py-0.5 rounded text-text-primary/70">{k}: {String(v)}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {!searchTerm && (
+               <div className="text-center text-text-primary/40 py-12 border-dashed border-2 border-brand-primary/10 rounded-xl">
+                 <p className="font-bold text-lg">Usa el buscador de arriba</p>
+                 <p className="text-sm">Encuentra la variante exacta a la que quieres sumarle o restarle stock físico.</p>
+               </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-bg-secondary border border-brand-primary/20 rounded-xl p-6 shadow-sm flex flex-col gap-6 max-w-2xl mx-auto w-full">
+            <div className="flex justify-between items-start border-b border-brand-primary/10 pb-4">
+              <div>
+                <h2 className="text-xl font-black text-brand-primary">Ajustar Stock</h2>
+                <p className="font-mono text-sm text-text-primary/60 mt-1">SKU: {selectedInventoryItem.sku}</p>
+              </div>
+              <button onClick={() => setSelectedInventoryItem(null)} className="text-sm font-bold text-text-primary/40 hover:text-accent transition-colors hover:bg-bg-primary px-3 py-1 rounded">&times; Cancelar</button>
+            </div>
+
+            <div className="bg-bg-primary p-4 rounded-lg border border-brand-primary/10">
+              <p className="font-bold text-text-primary">{selectedInventoryItem.productName}</p>
+              <div className="flex gap-2 mt-2">
+                {selectedInventoryItem.attributes && Object.entries(selectedInventoryItem.attributes).map(([k, v]) => (
+                  <span key={k} className="text-[10px] bg-bg-secondary px-2 py-1 rounded text-text-primary/70 font-bold">{k}: {String(v)}</span>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleAdjustInventory} className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-text-primary/70 uppercase">Tipo de Ajuste</label>
+                  <select value={stockChangeType} onChange={(e: any) => setStockChangeType(e.target.value)} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary font-bold">
+                    <option value="ADD">Ingreso (Surtir +)</option>
+                    <option value="REMOVE">Merma / Pérdida (-)</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-text-primary/70 uppercase">Cantidad Física</label>
+                  <input type="number" min="1" required value={stockChangeAmount} onChange={e => setStockChangeAmount(Number(e.target.value))} className="p-3 bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none focus:border-brand-primary text-xl font-black" />
+                </div>
+              </div>
+
+              <div className="bg-brand-primary/5 p-4 rounded-lg border border-brand-primary/10 mt-2">
+                <p className="text-xs text-brand-primary/80 font-bold">Resumen del movimiento contable</p>
+                <ul className="text-sm text-text-primary/80 mt-2 flex flex-col gap-1 font-mono">
+                  <li>• physicalDelta: <span className="font-black text-text-primary">{stockChangeType === 'ADD' ? '+' : '-'}{stockChangeAmount}</span></li>
+                  <li>• availableDelta: <span className="font-black text-text-primary">{stockChangeType === 'ADD' ? '+' : '-'}{stockChangeAmount}</span></li>
+                  <li>• reserved/redundancy: <span className="font-black text-text-primary">0</span></li>
+                </ul>
+              </div>
+
+              <button type="submit" disabled={stockChangeAmount <= 0} className={`mt-4 w-full py-4 font-black text-lg rounded-xl transition-all shadow-xl text-white ${stockChangeType === 'ADD' ? 'bg-green-600 hover:bg-green-500 shadow-green-600/20' : 'bg-red-600 hover:bg-red-500 shadow-red-600/20'} disabled:opacity-50`}>
+                {stockChangeType === 'ADD' ? 'Registrar Ingreso a Inventario' : 'Registrar Pérdida de Inventario'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderProductos = () => {
     if (!isCreating) {

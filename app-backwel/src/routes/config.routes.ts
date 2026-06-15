@@ -62,7 +62,8 @@ configRouter.get('/category-metadata', async (req, res) => {
     const result = await pool.query('SELECT category_id, description FROM category_metadata');
     res.json(result.rows);
   } catch (error) {
-    res.status(500).json({ error: 'db_error' });
+    console.error('🔥 Error SQL en /category-metadata:', error);
+    res.status(500).json({ error: 'db_error', detail: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
 
