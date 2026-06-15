@@ -22,7 +22,19 @@ public class CreateCategoryRequest {
         private final UUID parentId;
 
 
+        // todo finish save description implementation in db
+        @Size(max = 512, message = "Description cannot exceed 512 characters.")
+        @Pattern(
+                regexp = "^[^<>]*$",
+                message = "Description contains forbidden HTML or script characters.")
+        private final String description;
+
+
         public Optional<UUID> getParentId() {
                 return Optional.ofNullable(parentId);
+        }
+
+        public Optional<String> getDescription() {
+                return Optional.ofNullable(description);
         }
 }

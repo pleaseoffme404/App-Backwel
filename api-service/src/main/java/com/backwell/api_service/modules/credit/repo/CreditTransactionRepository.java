@@ -1,6 +1,6 @@
-package com.backwell.api_service.modules.users.repo;
+package com.backwell.api_service.modules.credit.repo;
 
-import com.backwell.api_service.modules.users.entity.credit.CreditTransaction;
+import com.backwell.api_service.modules.credit.entity.CreditTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;

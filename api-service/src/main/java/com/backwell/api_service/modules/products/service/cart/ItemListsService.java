@@ -9,16 +9,18 @@ import com.backwell.api_service.modules.inventory.service.RedisInventoryCacheMan
 import com.backwell.api_service.modules.products.controller.res.CartItemDTO;
 import com.backwell.api_service.modules.products.controller.res.CartViewDTO;
 import com.backwell.api_service.modules.products.controller.res.SavedItemDTO;
-import com.backwell.api_service.modules.products.jpa.entity.cart.*;
+import com.backwell.api_service.modules.products.jpa.entity.cart.Cart;
+import com.backwell.api_service.modules.products.jpa.entity.cart.CartItem;
+import com.backwell.api_service.modules.products.jpa.entity.cart.SavedLaterItem;
 import com.backwell.api_service.modules.products.jpa.entity.prod.Item;
-import com.backwell.api_service.modules.products.jpa.entity.prod.Item_;
 import com.backwell.api_service.modules.products.jpa.repo.ItemRepository;
+import com.backwell.api_service.modules.products.jpa.repo.cart.CartItemRepository;
 import com.backwell.api_service.modules.products.jpa.repo.cart.CartRepository;
 import com.backwell.api_service.modules.products.meilisearch.dto.StockLevel;
-import jakarta.persistence.EntityGraph;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Subgraph;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ private final EntityManager em;
     private final CartService cartService;
     private final UUIDService uuidService;
     private final ItemRepository itemRepository;
+    private final CartItemRepository cartItemRepository;
 
     @Transactional
     public CartViewDTO getCart(UserSession userSession) {
@@ -70,12 +73,20 @@ private final EntityManager em;
         return getCartDTO(session);
     }
 
-    @Transactional CartViewDTO removeCartItem(UserSession session, UUID itemId) {
+    @Transactional
+    public CartViewDTO removeCartItem(UserSession session, UUID itemId) {
         cartService.removeFromCart(session, itemId);
         return getCartDTO(session);
     }
 
-    private List<String> auditAndRefreshCartAndSaved(UserSession userSession) {
+    @Transactional
+    public void clearCart(@NotNull UUID cartId) {
+        cartItemRepository.clearCart(cartId);
+    }
+
+    @Transactional
+    @NonNull
+    public List<String> auditAndRefreshCartAndSaved(UserSession userSession) {
         Cart root = cartRepository.findCartForUserId(userSession.uuid())
                 .orElseThrow(() -> {
                     String msg = String.format("No cart was found for User with Id: `%s`.",  userSession.uuid());
