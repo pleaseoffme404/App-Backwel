@@ -2,6 +2,7 @@ package com.disthropic.api_gateway;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
@@ -11,6 +12,7 @@ import org.springframework.web.reactive.config.EnableWebFlux;
 @SpringBootApplication
 @EnableDiscoveryClient
 @EnableConfigurationProperties
+@ConfigurationPropertiesScan
 @EnableWebFlux
 public class ApiGatewayApplication {
 
