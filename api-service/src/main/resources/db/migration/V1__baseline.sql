@@ -4,11 +4,11 @@ CREATE SEQUENCE IF NOT EXISTS error_logs_seq START WITH 1 INCREMENT BY 50;
 
 CREATE SEQUENCE IF NOT EXISTS item_base_price_change_track_seq START WITH 1 INCREMENT BY 100;
 
+CREATE SEQUENCE IF NOT EXISTS order_adjustment_seq START WITH 1 INCREMENT BY 10;
+
 CREATE SEQUENCE IF NOT EXISTS price_calculation_history_seq START WITH 1 INCREMENT BY 100;
 
 CREATE SEQUENCE IF NOT EXISTS user_address_seq START WITH 1 INCREMENT BY 50;
-
-CREATE SEQUENCE IF NOT EXISTS user_credit_seq START WITH 1 INCREMENT BY 50;
 
 CREATE TABLE cart
 (
@@ -22,7 +22,7 @@ CREATE TABLE cart_item
 (
     id             UUID                     NOT NULL,
     cart_id        UUID,
-    variant_id     UUID                     NOT NULL,
+    item_id        UUID                     NOT NULL,
     saved_quantity INTEGER,
     last_update    TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_cartitem PRIMARY KEY (id)
@@ -39,11 +39,13 @@ CREATE TABLE category
 
 CREATE TABLE credit_transaction
 (
-    id         UUID                        NOT NULL,
-    user_id    UUID                        NOT NULL,
-    type       VARCHAR(255)                NOT NULL,
-    delta      DECIMAL                     NOT NULL,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    id              UUID                     NOT NULL,
+    idempotency_key UUID                     NOT NULL,
+    user_id         UUID                     NOT NULL,
+    actor_user_id   UUID,
+    type            VARCHAR(255)             NOT NULL,
+    delta           DECIMAL(12, 2)           NOT NULL,
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_credittransaction PRIMARY KEY (id)
 );
 
@@ -63,16 +65,16 @@ CREATE TABLE cupon
 
 CREATE TABLE discount
 (
-    id             UUID                        NOT NULL,
-    name           VARCHAR(255)                NOT NULL,
-    decimal_value  DECIMAL(5, 4)               NOT NULL,
-    decimal_factor DECIMAL(5, 4)               NOT NULL,
-    stackable      BOOLEAN                     NOT NULL,
-    start_date     TIMESTAMP WITH TIME ZONE    NOT NULL,
-    end_date       TIMESTAMP WITH TIME ZONE    NOT NULL,
-    active         BOOLEAN                     NOT NULL,
-    last_update    TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    created_at     TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    id             UUID                     NOT NULL,
+    name           VARCHAR(255)             NOT NULL,
+    decimal_value  DECIMAL(5, 4)            NOT NULL,
+    decimal_factor DECIMAL(5, 4)            NOT NULL,
+    stackable      BOOLEAN                  NOT NULL,
+    start_date     TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_date       TIMESTAMP WITH TIME ZONE NOT NULL,
+    active         BOOLEAN                  NOT NULL,
+    last_update    TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at     TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT pk_discount PRIMARY KEY (id)
 );
 
@@ -176,6 +178,51 @@ CREATE TABLE item_picture
     CONSTRAINT pk_itempicture PRIMARY KEY (id)
 );
 
+CREATE TABLE order_adjustment
+(
+    id       BIGINT         NOT NULL,
+    order_id UUID           NOT NULL,
+    label    VARCHAR(255)   NOT NULL,
+    amount   DECIMAL(12, 2) NOT NULL,
+    CONSTRAINT pk_orderadjustment PRIMARY KEY (id)
+);
+
+CREATE TABLE order_detail
+(
+    id             UUID                     NOT NULL,
+    checkout_token UUID                     NOT NULL,
+    user_id        UUID                     NOT NULL,
+    created_at     TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT pk_orderdetail PRIMARY KEY (id)
+);
+
+CREATE TABLE order_item
+(
+    id         UUID           NOT NULL,
+    order_id   UUID           NOT NULL,
+    item_id    UUID           NOT NULL,
+    unit_price DECIMAL(12, 2) NOT NULL,
+    amount     INTEGER        NOT NULL,
+    CONSTRAINT pk_orderitem PRIMARY KEY (id)
+);
+
+CREATE TABLE order_timeline
+(
+    id              UUID                                   NOT NULL,
+    order_id        UUID                                   NOT NULL,
+    event           VARCHAR(255)                           NOT NULL,
+    additional_info TEXT,
+    timestamp       TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+    CONSTRAINT pk_ordertimeline PRIMARY KEY (id)
+);
+
+CREATE TABLE point_of_sale_order
+(
+    order_id       UUID NOT NULL,
+    seller_user_id UUID NOT NULL,
+    CONSTRAINT pk_pointofsaleorder PRIMARY KEY (order_id)
+);
+
 CREATE TABLE price_calculation_history
 (
     id               INTEGER                  NOT NULL,
@@ -255,11 +302,11 @@ CREATE TABLE user_address
 
 CREATE TABLE user_credit
 (
-    id           BIGINT                      NOT NULL,
-    used_id      UUID                        NOT NULL,
+    user_id      UUID                        NOT NULL,
     balance      DECIMAL                     NOT NULL,
+    version      BIGINT,
     last_updated TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    CONSTRAINT pk_usercredit PRIMARY KEY (id)
+    CONSTRAINT pk_usercredit PRIMARY KEY (user_id)
 );
 
 CREATE TABLE user_info
@@ -306,6 +353,9 @@ ALTER TABLE cart
 ALTER TABLE category
     ADD CONSTRAINT uc_category_name UNIQUE (name);
 
+ALTER TABLE credit_transaction
+    ADD CONSTRAINT uc_credittransaction_idempotencykey UNIQUE (idempotency_key);
+
 ALTER TABLE invitation_trace
     ADD CONSTRAINT uc_invitationtrace_invited_uuid UNIQUE (invited_uuid);
 
@@ -315,9 +365,6 @@ ALTER TABLE item
 ALTER TABLE saved_later_list
     ADD CONSTRAINT uc_savedlaterlist_user UNIQUE (user_id);
 
-ALTER TABLE user_credit
-    ADD CONSTRAINT uc_usercredit_used UNIQUE (used_id);
-
 ALTER TABLE user_info
     ADD CONSTRAINT uc_userinfo_email UNIQUE (email);
 
@@ -325,7 +372,7 @@ ALTER TABLE wish_list
     ADD CONSTRAINT uc_wishlist_tittle UNIQUE (tittle);
 
 ALTER TABLE cart_item
-    ADD CONSTRAINT uk_cart_product UNIQUE (cart_id, variant_id);
+    ADD CONSTRAINT uk_cart_product UNIQUE (cart_id, item_id);
 
 ALTER TABLE saved_later_item
     ADD CONSTRAINT uk_saved_list_item UNIQUE (list_id, item_id);
@@ -356,13 +403,16 @@ ALTER TABLE cart_item
     ADD CONSTRAINT FK_CARTITEM_ON_CART FOREIGN KEY (cart_id) REFERENCES cart (id);
 
 ALTER TABLE cart_item
-    ADD CONSTRAINT FK_CARTITEM_ON_VARIANT FOREIGN KEY (variant_id) REFERENCES item (id);
+    ADD CONSTRAINT FK_CARTITEM_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
 
 ALTER TABLE cart
     ADD CONSTRAINT FK_CART_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
 
 ALTER TABLE category
     ADD CONSTRAINT FK_CATEGORY_ON_PARENT FOREIGN KEY (parent_id) REFERENCES category (id);
+
+ALTER TABLE credit_transaction
+    ADD CONSTRAINT FK_CREDITTRANSACTION_ON_ACTOR_USER FOREIGN KEY (actor_user_id) REFERENCES user_info (uuid);
 
 ALTER TABLE credit_transaction
     ADD CONSTRAINT FK_CREDITTRANSACTION_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
@@ -404,11 +454,34 @@ ALTER TABLE item
 
 CREATE INDEX idx_item_product ON item (product_id);
 
+ALTER TABLE order_adjustment
+    ADD CONSTRAINT FK_ORDERADJUSTMENT_ON_ORDER FOREIGN KEY (order_id) REFERENCES order_detail (id);
+
+ALTER TABLE order_detail
+    ADD CONSTRAINT FK_ORDERDETAIL_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
+
+ALTER TABLE order_item
+    ADD CONSTRAINT FK_ORDERITEM_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
+
+ALTER TABLE order_item
+    ADD CONSTRAINT FK_ORDERITEM_ON_ORDER FOREIGN KEY (order_id) REFERENCES order_detail (id);
+
+ALTER TABLE order_timeline
+    ADD CONSTRAINT FK_ORDERTIMELINE_ON_ORDER FOREIGN KEY (order_id) REFERENCES order_detail (id);
+
+ALTER TABLE point_of_sale_order
+    ADD CONSTRAINT FK_POINTOFSALEORDER_ON_ORDER FOREIGN KEY (order_id) REFERENCES order_detail (id);
+
+ALTER TABLE point_of_sale_order
+    ADD CONSTRAINT FK_POINTOFSALEORDER_ON_SELLER_USER FOREIGN KEY (seller_user_id) REFERENCES user_info (uuid);
+
 ALTER TABLE price_calculation_history
     ADD CONSTRAINT FK_PRICECALCULATIONHISTORY_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);
 
 ALTER TABLE product_attribute
     ADD CONSTRAINT FK_PRODUCTATTRIBUTE_ON_PRODUCT FOREIGN KEY (product_id) REFERENCES product (id);
+
+CREATE INDEX idx_product_attribute_porudtc_id ON product_attribute (product_id);
 
 ALTER TABLE product
     ADD CONSTRAINT FK_PRODUCT_ON_CATEGORY FOREIGN KEY (category_id) REFERENCES category (id);
@@ -428,7 +501,7 @@ ALTER TABLE user_address
     ADD CONSTRAINT FK_USERADDRESS_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
 
 ALTER TABLE user_credit
-    ADD CONSTRAINT FK_USERCREDIT_ON_USED FOREIGN KEY (used_id) REFERENCES user_info (uuid);
+    ADD CONSTRAINT FK_USERCREDIT_ON_USER FOREIGN KEY (user_id) REFERENCES user_info (uuid);
 
 ALTER TABLE wish_item
     ADD CONSTRAINT FK_WISHITEM_ON_ITEM FOREIGN KEY (item_id) REFERENCES item (id);

@@ -33,16 +33,19 @@ WHERE u.uuid IN :ids
 """)
     List<UserInfo> findWithIdIn(Set<UUID> ids);
 
-
     /**
      * Returns the entity or throws a {@link BusinessException} if user 404*/
     default UserInfo getOrThrow(UserSession session) {
         if (session == null || session.uuid() == null) {
             throw new BusinessException("Invalid session", USER_NOT_FOUND);
         }
-        return findByUuid(session.uuid())
+        return getOrThrow(session.uuid());
+    }
+
+    default UserInfo getOrThrow(UUID uuid) {
+        return findByUuid(uuid)
                 .orElseThrow(() -> new BusinessException(
-                        "User %s was not found".formatted(session.uuid()),
+                        "User with Id: [%s] was not found".formatted(uuid),
                         USER_NOT_FOUND
                 ));
     }

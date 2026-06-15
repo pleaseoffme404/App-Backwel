@@ -9,9 +9,9 @@ import com.backwell.api_service.modules.invitations.entity.InvitationTrace;
 import com.backwell.api_service.modules.invitations.repo.ReferralTraceRepository;
 import com.backwell.api_service.modules.users.dto.CompleteAccountRequest;
 import com.backwell.api_service.modules.users.entity.UserInfo;
-import com.backwell.api_service.modules.users.entity.credit.CreditTransaction;
+import com.backwell.api_service.modules.credit.entity.CreditTransaction;
 import com.backwell.api_service.modules.users.repo.UserInfoRepository;
-import com.backwell.api_service.modules.users.service.CreditsService;
+import com.backwell.api_service.modules.credit.service.CreditsService;
 import com.backwell.api_service.modules.users.service.CuponService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -117,7 +117,7 @@ public class InvitationService {
 
         CreditTransaction transaction = creditsService.buildCommissionTransaction(trace, amount);
 
-        creditsService.updateUserCredit(transaction);
+        var result = creditsService.updateUserCredit(transaction);
 
         referralTraceRepository.save(trace);
 

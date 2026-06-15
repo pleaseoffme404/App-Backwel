@@ -1,4 +1,4 @@
-package com.backwell.api_service.modules.users.entity.credit;
+package com.backwell.api_service.modules.credit.entity;
 
 import com.backwell.api_service.modules.users.entity.UserInfo;
 import jakarta.persistence.*;
@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,20 +17,19 @@ import java.time.Instant;
 @Entity
 public class UserCredit {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_credit_seq")
-    @SequenceGenerator(
-            name = "user_credit_seq",
-            sequenceName = "user_credit_seq"
-    )
-    private Long id;
+    private UUID userId;
 
+    @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "used_id", nullable = false, updatable = false)
+    @JoinColumn(name = "user_id", nullable = false, updatable = false)
     private UserInfo userInfo;
 
     @Setter
     @Column(nullable = false)
     private BigDecimal balance = BigDecimal.ZERO;
+
+    @Version
+    private Long version;
 
 
     @Column(nullable = false)
