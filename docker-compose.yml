@@ -15,6 +15,7 @@ services:
     depends_on:
       email-service:
         condition: service_started
+
   auth-db:
     image: postgres:18
     container_name: auth-database
@@ -116,6 +117,7 @@ services:
 
   auth-server:
     build: ./auth-server
+    container_name: auth-server
     ports:
       - "9000:9000"
     depends_on:
@@ -128,6 +130,7 @@ services:
       interval: 10s
       retries: 5
     environment:
+      ISSUER_URI: ${ISSUER_URI}
       AUTH_DB_URL: jdbc:postgresql://auth-db:5432/${AUTH_DB_NAME}
       AUTH_DB_USER: ${AUTH_DB_USER}
       AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
@@ -139,26 +142,29 @@ services:
       AUTH_SERVER_PRIVATE_KEY: ${AUTH_SERVER_PRIVATE_KEY}
       AUTH_SERVER_PUBLIC_KEY: ${AUTH_SERVER_PUBLIC_KEY}
       AUTH_SERVER_KEY_ID: ${AUTH_SERVER_KEY_ID}
-      ISSUER_URI: ${ISSUER_URI}
 
   api-gateway:
     build: ./api-gateway
+    container_name: api-gateway
     ports:
       - "8080:8080"
+    # ESTO HACE QUE 'localhost' DENTRO DEL CONTENEDOR APUNTE A TU PC
+    extra_hosts:
+      - "localhost:host-gateway"
     depends_on:
       auth-server:
         condition: service_healthy
       redis-session:
         condition: service_started
     environment:
+      ISSUER_URI: ${ISSUER_URI}
       AUTH_REDIS_HOST: redis-session
       AUTH_REDIS_PORT: 6379
       AUTH_REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
       CLIENT_ID: gateway-client
       CLIENT_SECRET: ${GATEWAY_SECRET}
-      ISSUER_URI: ${ISSUER_URI}
-      AUTH_SERVER_EXTERNAL: http://localhost:9000/auth
       AUTH_SERVER_INTERNAL: http://auth-server:9000/auth
+      AUTH_SERVER_EXTERNAL: http://localhost:9000/auth
       EUREKA_URL: http://service-registry:8761/eureka/
 
   api-service:
@@ -237,6 +243,12 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+# RED UNIFICADA PARA TODOS
+networks:
+  default:
+    name: backwell-net
+    driver: bridge
 
 volumes:
   meili_data:

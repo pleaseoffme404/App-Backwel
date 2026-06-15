@@ -73,17 +73,17 @@ app:
 
   client-registration:
     clients:
-      gateway:
+      GATEWAY:
         client-id: "gateway-client"
         secret: ${GATEWAY_SECRET}
         redirect-uri: ${GATEWAY_URI:http://localhost:8080}/login/oauth2/code/gateway-client
         access-token-ttl: "PT15M"
-        refresh-token-ttl: "P30D"
-      service:
+        refresh-token-ttl: "PT720H"
+      SERVICE:
         client-id: "service-client"
         secret: ${SERVICE_SECRET}
         access-token-ttl: "PT15M"
-        refresh-token-ttl: "P30D"
+        refresh-token-ttl: "PT30D"
 
 logging:
   level:

@@ -1,12 +1,14 @@
 server:
+  port: 8080
   forward-headers-strategy: framework
-  servlet:
+
+  reactive:
     session:
       cookie:
+        name: SESSION
         http-only: true
         secure: false
         same-site: lax
-  port: 8080
 
 
 spring:
@@ -18,7 +20,6 @@ spring:
     redis:
       namespace: gateway:session
       flush-mode: immediate
-
   data:
     redis:
       host: ${AUTH_REDIS_HOST:localhost}
@@ -92,16 +93,12 @@ spring:
 
         provider:
           auth-server:
-            issuer-uri: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}
+            issuer-uri: ${ISSUER_URI:http://auth-server:9000/auth}
             authorization-uri: ${AUTH_SERVER_EXTERNAL:http://localhost:9000/auth}/oauth2/authorize
             token-uri: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}/oauth2/token
             jwk-set-uri: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}/oauth2/jwks
             user-name-attribute: sub
 
-oauth2:
-  client:
-    pkce-enabled: true
-    require-proof-key: true
 
 management:
   endpoints:
@@ -132,3 +129,13 @@ eureka:
   client:
     service-url:
       defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+app:
+#  oauth2:
+#    registration:
+#      client-id: ${CLIENT_ID:gateway-client}
+#      client-secret: ${CLIENT_SECRET}
+#      issuer-uri: ${ISSUER_URI:http://auth-server:9000/auth}
+#      auth-server-internal: ${AUTH_SERVER_INTERNAL:http://auth-server:9000/auth}
+
+  security:
+    auth-server-external-logout-url: ${AUTH_SERVER_EXTERNAL:http://localhost:9000/auth}/connect/logout

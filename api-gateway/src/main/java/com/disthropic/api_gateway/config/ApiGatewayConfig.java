@@ -2,6 +2,7 @@ package com.disthropic.api_gateway.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -13,6 +14,8 @@ import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.client.InMemoryReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.ReactiveOAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.oidc.web.server.logout.OidcClientInitiatedServerLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.InMemoryReactiveClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.oauth2.client.web.server.DefaultServerOAuth2AuthorizationRequestResolver;
@@ -47,6 +50,11 @@ import static org.springframework.web.reactive.function.server.RequestPredicates
 public class ApiGatewayConfig {
     private final ReactiveClientRegistrationRepository clientRegistrationRepository;
 
+
+
+    @Value("${app.security.auth-server-external-logout-url}")
+    private String externalLogoutUrl;
+
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
@@ -62,6 +70,8 @@ public class ApiGatewayConfig {
         OidcClientInitiatedServerLogoutSuccessHandler logoutSuccessHandler
                 = new OidcClientInitiatedServerLogoutSuccessHandler(clientRegistrationRepository);
 
+        logoutSuccessHandler.setLogoutSuccessUrl(URI.create("http://localhost:9000/auth/connect/logout"));
+        logoutSuccessHandler.setPostLogoutRedirectUri("http://localhost:3000/");
 
         return http
                 .csrf(csrf -> csrf

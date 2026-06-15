@@ -51,6 +51,8 @@ import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -89,8 +91,17 @@ public class AuthorizationServerConfig {
         OAuth2AuthorizationServerConfigurer authServerConfigurer =
                 OAuth2AuthorizationServerConfigurer.authorizationServer();
 
+        RequestMatcher endpointsMatcher = new OrRequestMatcher(
+                authServerConfigurer.getEndpointsMatcher(),
+
+                new org.springframework.security.web.util.matcher.AndRequestMatcher(
+                        request -> "GET".equalsIgnoreCase(request.getMethod()),
+                        request -> request.getServletPath().equals("/connect/logout")
+                )
+        );
+
         http
-                .securityMatcher(authServerConfigurer.getEndpointsMatcher())
+                .securityMatcher(endpointsMatcher)
                 .with(authServerConfigurer, (authorizationServer) ->
                         authorizationServer
                                 .oidc(Customizer.withDefaults())
@@ -118,7 +129,7 @@ public class AuthorizationServerConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/login","/logout", "/oauth2/**", "/register/**")
+                        .ignoringRequestMatchers("/login","/logout", "/oauth2/**", "/register/**", "/connect/**")
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(whiteList()).permitAll()
@@ -132,6 +143,8 @@ public class AuthorizationServerConfig {
 
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
+                        .authorizationEndpoint(authorization -> authorization
+                                .authorizationRequestRepository(authorizationRequestRepository()))
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(userSecurityService))
                         .successHandler(federatedIdentitySuccessHandler)
                 )
@@ -139,8 +152,12 @@ public class AuthorizationServerConfig {
                         .authenticationEntryPoint(new  LoginUrlAuthenticationEntryPoint("/login"))
                         .accessDeniedHandler(accessDeniedHandler))
                 .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutRequestMatcher(request ->
+                                "GET".equalsIgnoreCase(request.getMethod()) && "/logout".equals(request.getServletPath())
+                        )
                         .logoutSuccessUrl("/login?logout")
-                        .deleteCookies("JSESSIONID")
+                        .deleteCookies("SESSION", "AUTH_SESSION_ID")
                         .invalidateHttpSession(true)
                         .permitAll()
                 );
