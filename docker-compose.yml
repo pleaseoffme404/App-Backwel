@@ -8,7 +8,7 @@ services:
     environment:
       - SIMULATOR_PORT=3005
       - EMAIL_SERVICE_URL=http://email-service:3001/emails
-      - CRON_SCHEDULE=*/1 * * * *
+      - CRON_SCHEDULE=0 */8 * * * *
       - SERVICE_EMAIL_SECRET=${SERVICE_EMAIL_SECRET}
     ports:
       - "3005:3005"

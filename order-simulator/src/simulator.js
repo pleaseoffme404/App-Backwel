@@ -1,8 +1,8 @@
 import { triggerEmailWebhook } from './services/notificationClient.js';
 
 const mockOrders = [
-    { id: 'BKW-1001', customer: 'Luis Martínez', email: 'luis@example.com', status: 'processing', total: '850.00' },
-    { id: 'BKW-1002', customer: 'Daniel Prado', email: 'daniel@example.com', status: 'shipped', total: '1,200.00' }
+    { id: 'BKW-1001', customer: 'Luis Martínez', email: 'luisdaniel.maritnezprado@gmail.com', status: 'processing', total: '850.00' },
+    { id: 'BKW-1002', customer: 'Daniel Prado', email: 'luisdaniel.maritnezprado@gmail.com', status: 'shipped', total: '1,200.00' }
 ];
 
 const STATUS_FLOW = {
