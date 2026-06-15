@@ -62,9 +62,30 @@ public class DiscountRepositoryImpl implements DiscountCustomRepository {
         var p = PRODUCT;
         var c = CATEGORY;
 
-        DiscountMetadata metadata = dsl.selectFrom(d)
+        DiscountMetadata metadata = dsl.select(
+                        d.ID,
+                        d.NAME,
+                        d.DECIMAL_VALUE,
+                        d.STACKABLE,
+                        d.ACTIVE,
+                        d.START_DATE,
+                        d.END_DATE,
+                        d.CREATED_AT,
+                        d.LAST_UPDATE
+                )
+                .from(d)
                 .where(d.ID.eq(discountId))
-                .fetchOneInto(DiscountMetadata.class);
+                .fetchOne(r -> new DiscountMetadata(
+                        r.get(d.ID),
+                        r.get(d.NAME),
+                        r.get(d.DECIMAL_VALUE),
+                        r.get(d.STACKABLE),
+                        r.get(d.ACTIVE),
+                        r.get(d.START_DATE).toInstant(),
+                        r.get(d.END_DATE).toInstant(),
+                        r.get(r.field(d.CREATED_AT)).toInstant(),
+                        r.get(r.field(d.LAST_UPDATE)).toInstant()
+                ));
 
         if (metadata == null) {
             throw new BusinessException(String.format("Discount with Id: '%s' was not found.", discountId), DISCOUNT_NOT_FOUND);
