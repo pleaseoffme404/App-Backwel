@@ -83,8 +83,8 @@ public class DiscountRepositoryImpl implements DiscountCustomRepository {
                         r.get(d.ACTIVE),
                         r.get(d.START_DATE).toInstant(),
                         r.get(d.END_DATE).toInstant(),
-                        r.get(r.field(d.CREATED_AT)).toInstant(),
-                        r.get(r.field(d.LAST_UPDATE)).toInstant()
+                        r.get(d.CREATED_AT).toInstant(),
+                        r.get(d.LAST_UPDATE).toInstant()
                 ));
 
         if (metadata == null) {
