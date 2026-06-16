@@ -166,7 +166,7 @@ public class ProductDTORepository {
                     .itemId(i.itemId)
                     .sku(i.sku)
                     .visible(i.visible)
-                    .itemAttributes(itemAttributes)
+                     .itemAttributes(itemAttributes)
                     .pictures(i.pictures)
                     .basePrice(i.basePrice)
                     .lastCheckedPrice(i.finalPrice)

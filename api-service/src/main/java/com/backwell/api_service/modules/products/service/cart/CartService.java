@@ -4,6 +4,7 @@ import com.backwell.api_service.common.config.user.UserSession;
 import com.backwell.api_service.common.exception.BusinessException;
 import com.backwell.api_service.common.exception.SystemException;
 import com.backwell.api_service.common.util.UUIDService;
+import com.backwell.api_service.modules.inventory.dto.RedisInventoryInfo;
 import com.backwell.api_service.modules.inventory.service.RedisInventoryCacheManager;
 import com.backwell.api_service.modules.products.controller.res.CartItemDTO;
 import com.backwell.api_service.modules.products.controller.req.cart.AddToCartRequest;
@@ -19,8 +20,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.backwell.api_service.common.exception.codes.ProductErrorCode.*;
 
@@ -110,7 +116,31 @@ public class CartService {
     public List<CartItemDTO> getCart(UserSession userSession) {
         List<CartItemProjection> extracts = cartItemRepository.getCartExtractForUser(userSession.uuid());
 
-        return null;
+        Set<UUID> itemIds = extracts.stream().map(CartItemProjection::itemId).collect(Collectors.toSet());
+
+        Map<UUID, RedisInventoryInfo> stocks = cacheManager.getInventories(itemIds);
+
+        return extracts.stream().map(e-> {
+            int stockLimit = Integer.min(
+                    e.logicalLimit(),
+                    stocks.get(e.itemId()).availableStock()
+            );
+            BigDecimal lineTotal = e.unitPrice()
+                    .multiply(BigDecimal.valueOf(e.savedQuantity()))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            return CartItemDTO.builder()
+                    .itemId(e.itemId())
+                    .sku(e.sku())
+                    .name(e.name())
+                    .pictureUrl(e.pictureUrl())
+                    .amount(e.savedQuantity())
+                    .stockLimit(stockLimit)
+                    .unitPrice(e.unitPrice())
+                    .lineTotal(lineTotal)
+                    .discountDecimal(e.discountDecimal())
+                    .build();
+        }).toList();
     }
 
 

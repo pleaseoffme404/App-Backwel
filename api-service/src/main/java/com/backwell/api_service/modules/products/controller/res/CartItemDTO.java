@@ -1,8 +1,11 @@
 package com.backwell.api_service.modules.products.controller.res;
 
+import lombok.Builder;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
+@Builder
 public record CartItemDTO(
         UUID itemId,
         String sku,

@@ -17,7 +17,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Table(
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_cart_product", columnNames = {"cart_id", "variant_id"})
+                @UniqueConstraint(name = "uk_cart_product", columnNames = {"cart_id", "item_id"})
         }
 )
 @Getter
@@ -32,7 +32,7 @@ public class CartItem {
 
     @Setter
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "variant_id", nullable = false,  updatable = false)
+    @JoinColumn(name = "item_id", nullable = false,  updatable = false)
     private Item item;
 
     @Setter

@@ -54,6 +54,9 @@ services:
       POSTGRES_DB: ${API_DB_NAME}
     ports:
       - "${API_DB_PORT}:5432"
+    depends_on:
+      auth-server:
+        condition: service_healthy
     volumes:
       - api_postgres_data:/var/lib/postgresql
       - ./api-service/src/main/resources/db/migration:/docker-entrypoint-initdb.d/:ro
