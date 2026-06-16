@@ -12,14 +12,128 @@ export default function POSModule() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isMenuCollapsed, setIsMenuCollapsed] = useState(true);
+const [isMenuCollapsed, setIsMenuCollapsed] = useState(true);
+
+  const [isLocked, setIsLocked] = useState(false);
+  const [unlockPin, setUnlockPin] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
 
   useEffect(() => {
     const roles = session?.user?.roles || [];
-    if (roles.includes('ADMIN') || roles.includes('OWNER')) {
-      localStorage.setItem('backwel_admin_locked', 'true');
+    const requiresPin = ['ADMIN', 'OWNER', 'MANAGER', 'STAFF'].some(r => roles.some(role => role.toUpperCase().includes(r)));
+    if (requiresPin && !sessionStorage.getItem('pos_unlocked')) {
+      setIsLocked(true);
     }
   }, [session]);
+
+  const handleUnlock = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (unlockPin.length !== 6) return;
+    
+    setUnlocking(true);
+    try {
+      const res = await fetch('/auth/pin-authentication/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: unlockPin })
+      });
+      
+      if (res.ok) {
+        sessionStorage.setItem('pos_unlocked', 'true');
+        setIsLocked(false);
+        setUnlockPin('');
+      } else {
+        const Swal = (await import('sweetalert2')).default;
+        Swal.fire({
+          title: 'PIN Incorrecto',
+          text: 'El código ingresado no es válido.',
+          icon: 'error',
+          confirmButtonColor: '#38BDF8'
+        });
+        setUnlockPin('');
+      }
+    } catch (err) {
+      const Swal = (await import('sweetalert2')).default;
+      Swal.fire('Error', 'No se pudo verificar el PIN', 'error');
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isLocked || unlocking) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (/^\d$/.test(e.key)) {
+        setUnlockPin(prev => prev.length < 6 ? prev + e.key : prev);
+      } else if (e.key === 'Backspace') {
+        setUnlockPin(prev => prev.slice(0, -1));
+      } else if (e.key === 'Enter' && unlockPin.length === 6) {
+        handleUnlock();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLocked, unlocking, unlockPin]);
+
+  if (isLocked) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col justify-center items-center p-4 select-none">
+        <div className="max-w-sm w-full bg-bg-secondary p-8 rounded-2xl shadow-xl border border-brand-primary/10 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-brand-primary/10 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          </div>
+          <h2 className="text-xl font-black text-brand-primary mb-2">POS Bloqueado</h2>
+          <p className="text-text-primary/60 text-sm text-center mb-6">Ingresa tu PIN maestro</p>
+          
+          <div 
+            className="flex justify-center gap-3 mb-2 cursor-default"
+            onCopy={e => { e.preventDefault(); e.clipboardData?.setData('text/plain', '******'); }}
+          >
+            {[0, 1, 2, 3, 4, 5].map(idx => (
+              <div key={idx} className="w-10 h-14 flex items-center justify-center border-b-4 border-brand-primary/20 text-4xl font-black text-text-primary">
+                {idx < unlockPin.length ? '*' : ''}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 w-full max-w-[260px] mx-auto mt-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setUnlockPin(prev => prev.length < 6 ? prev + num : prev)}
+                className="h-16 text-2xl font-black bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none"
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setUnlockPin(prev => prev.slice(0, -1))}
+              className="h-16 text-2xl font-black bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none flex items-center justify-center"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z" /></svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnlockPin(prev => prev.length < 6 ? prev + '0' : prev)}
+              className="h-16 text-2xl font-black bg-bg-primary border border-brand-primary/20 rounded-lg text-text-primary outline-none"
+            >
+              0
+            </button>
+            <button
+              type="button"
+              onClick={() => { if (unlockPin.length === 6) handleUnlock(); }}
+              disabled={unlockPin.length !== 6 || unlocking}
+              className="h-16 text-xl font-black bg-accent text-white rounded-lg outline-none disabled:opacity-50"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
  useEffect(() => {
     const fetchCatalog = async () => {
