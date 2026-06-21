@@ -11,10 +11,12 @@ import java.util.UUID;
 public class UUIDService {
     private final TimeBasedEpochGenerator timeBasedEpochGenerator;
 
+    @Deprecated
     public UUID next() {
         return timeBasedEpochGenerator.generate();
     }
 
+    @Deprecated
     public String nextString() {
         return timeBasedEpochGenerator.generate().toString();
     }
