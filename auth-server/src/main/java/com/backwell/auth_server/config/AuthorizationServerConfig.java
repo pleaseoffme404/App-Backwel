@@ -9,7 +9,7 @@ import com.backwell.auth_server.security.service.UserSecurityService;
 import com.backwell.auth_server.security.user.AppOidcUser;
 import com.backwell.auth_server.security.user.AppUserDetails;
 import com.backwell.auth_server.security.user.UserDTO;
-import com.backwell.auth_server.service.UUIDGeneratorService;
+import com.backwell.auth_server.util.UUIDService;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -26,6 +26,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -68,14 +69,15 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@EnableMethodSecurity
 public class AuthorizationServerConfig {
-    private final UUIDGeneratorService uuidService;
     private final PasswordEncoder passwordEncoder;
     private final ClientRegistrationProperties clientProperties;
     private final UserSecurityService userSecurityService;
     private final CustomAccessDeniedHandler accessDeniedHandler;
     private final FederatedIdentitySuccessHandler federatedIdentitySuccessHandler;
     private final TokenClaimsEnhancer tokenClaimsEnhancer;
+    private final UUIDService uuidService;
 
     private String[] whiteList() {
         return new String[]{
@@ -179,8 +181,8 @@ public class AuthorizationServerConfig {
     @Bean
     public JWKSource<SecurityContext> jwkSource(JwtProperties jwtProperties) {
         try {
-            byte[] privateKeyBytes = Base64.getDecoder().decode(jwtProperties.getPrivateKey());
-            byte[] publicKeyBytes = Base64.getDecoder().decode(jwtProperties.getPublicKey());
+            byte[] privateKeyBytes = Base64.getDecoder().decode(jwtProperties.privateKey());
+            byte[] publicKeyBytes = Base64.getDecoder().decode(jwtProperties.publicKey());
 
             KeyFactory kf = KeyFactory.getInstance("RSA");
 
@@ -189,7 +191,7 @@ public class AuthorizationServerConfig {
 
             RSAKey rsaKey = new RSAKey.Builder((RSAPublicKey) publicKey)
                     .privateKey((RSAPrivateKey) privateKey)
-                    .keyID(jwtProperties.getKeyId())
+                    .keyID(jwtProperties.keyId())
                     .build();
             return new ImmutableJWKSet<>(new JWKSet(rsaKey));
         } catch (Exception e) {
@@ -225,7 +227,7 @@ public class AuthorizationServerConfig {
     @Bean
     public AuthorizationServerSettings authorizationServerSettings(JwtProperties jwtProperties) {
         return AuthorizationServerSettings.builder()
-                .issuer(jwtProperties.getIssuer())
+                .issuer(jwtProperties.issuer())
                 .build();
     }
 

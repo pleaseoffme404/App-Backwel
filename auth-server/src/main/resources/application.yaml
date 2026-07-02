@@ -15,9 +15,9 @@ spring:
     name: auth-server
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${AUTH_DB_URL:jdbc:postgresql://localhost:5432/identity-service}
-    username: ${AUTH_DB_USER:postgres }
-    password: ${AUTH_DB_PASSWORD:C5m.SuperGalaxy}
+    url: ${AUTH_DB_URL}
+    username: ${AUTH_DB_USER}
+    password: ${AUTH_DB_PASSWORD}
 
   thymeleaf:
     cache: false
@@ -65,6 +65,15 @@ spring:
 
 
 app:
+  defaults:
+    owner:
+      role-name: "OWNER"
+      user: "admin@backwel.com"
+      generate-password: true
+      password-length: 12
+      static-password: "r71d1mOdikQADFo3mkqRIbrK"
+    user-role:
+      name: "USER"
   jwt:
     private-key: ${AUTH_SERVER_PRIVATE_KEY}
     public-key: ${AUTH_SERVER_PUBLIC_KEY}

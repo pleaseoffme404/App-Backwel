@@ -1,22 +1,27 @@
 package com.backwell.auth_server.security.user;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class AppUserDetails implements UserDetails, IdentityContainer {
     private UserDTO user;
 
+    public AppUserDetails(UserDTO user) {
+        if (user == null) {
+            throw new IllegalArgumentException("UserDTO cannot be null");
+        }
+        this.user = user;
+    }
+
     @Override
+    @NonNull
     public UserDTO getUserDTO() {
         return user;
     }
@@ -43,7 +48,7 @@ public class AppUserDetails implements UserDetails, IdentityContainer {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return user.roles().stream().map(SimpleGrantedAuthority::new).collect(Collectors.toSet());
+        return this.fetchAuthorities();
     }
 
     @Override

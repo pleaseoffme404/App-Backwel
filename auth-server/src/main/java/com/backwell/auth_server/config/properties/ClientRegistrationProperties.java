@@ -1,12 +1,13 @@
 package com.backwell.auth_server.config.properties;
 
-import com.backwell.auth_server.service.UUIDGeneratorService;
-import lombok.*;
+import com.backwell.auth_server.util.UUIDService;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
-import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 
 import java.util.List;
 import java.util.Map;
@@ -27,13 +28,13 @@ public class ClientRegistrationProperties {
         private String refreshTokenTtl;
     }
 
-    public List<RegisteredClient> buildAll(PasswordEncoder passwordEncoder, UUIDGeneratorService uuidService) {
+    public List<RegisteredClient> buildAll(PasswordEncoder passwordEncoder, UUIDService uuidService) {
         return clients.entrySet().stream()
                 .map(entry -> {
                     ClientRegistrationType type = entry.getKey();
                     RegistrationProperties props = entry.getValue();
 
-                    String id = uuidService.generate().toString();
+                    String id = uuidService.nextString();
 
                     var builder = RegisteredClient
                             .withId(id)

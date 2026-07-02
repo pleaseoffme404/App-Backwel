@@ -1,31 +1,44 @@
 package com.backwell.auth_server.jpa.entity;
 
-import com.backwell.enums.RoleName;
+import com.backwell.enums.PermissionName;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
-@AllArgsConstructor
 @NoArgsConstructor
 @Data
 @Builder
+@AllArgsConstructor
 public class Role {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "role_seq ")
-    @SequenceGenerator(
-            name = "role_seq",
-            sequenceName = "role_seq"
+    private UUID id;
+
+    @Column(nullable = false,  unique = true)
+    private String name;
+
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "role_permissions",
+            joinColumns = @JoinColumn(name = "role_id", nullable = false, updatable = false),
+            inverseJoinColumns = @JoinColumn(name = "permission_id", nullable = false, updatable = false)
     )
-    private Long id;
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Set<Permission> permissions = new HashSet<>();
 
-    @Enumerated(EnumType.STRING)
-    @Column(unique = true, nullable = false,  updatable = false)
-    private RoleName roleName;
-
-    public Role (RoleName roleName) {
-        this.roleName = roleName;
+    public Set<PermissionName> getPermissionNamesSet() {
+        return getPermissions().stream()
+                .map(Permission::getPermissionName)
+                .collect(Collectors.toSet());
     }
 }

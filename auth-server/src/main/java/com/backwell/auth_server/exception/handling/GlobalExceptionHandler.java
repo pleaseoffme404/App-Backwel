@@ -5,6 +5,8 @@ import com.backwell.auth_server.exception.pin.AccountLockedException;
 import com.backwell.auth_server.exception.pin.InvalidPinException;
 import com.backwell.auth_server.exception.pin.PinUniqueConstraintViolation;
 import com.backwell.auth_server.exception.pin.PinVerificationInProgressException;
+import com.backwell.auth_server.exception.role.UnknownPermissionException;
+import com.backwell.auth_server.exception.role.UnknownRoleException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -35,5 +37,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PinUniqueConstraintViolation.class)
     public ResponseEntity<MessageResponse> handlePinUniqueConstraintViolation(PinUniqueConstraintViolation ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new MessageResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(UnknownRoleException.class)
+    public ResponseEntity<MessageResponse> handleUnknownRoleException(UnknownRoleException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(ex.getMessage()));
+    }
+    @ExceptionHandler(UnknownPermissionException.class)
+    public ResponseEntity<MessageResponse> handleUnknownPermissionException(UnknownPermissionException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessageResponse(ex.getMessage()));
     }
 }

@@ -1,11 +1,13 @@
 package com.backwell.auth_server.config;
 
-import com.backwell.auth_server.config.properties.JwtProperties;
+import com.backwell.auth_server.security.checker.SecurityChecker;
+import com.backwell.auth_server.security.expresion.CustomMethodSecurityExpressionHandler;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,7 +28,6 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 @EnableWebSecurity
 public class BeansConfig {
-    private final JwtProperties jwtProperties;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -61,5 +62,10 @@ public class BeansConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler(SecurityChecker securityChecker) {
+        return new CustomMethodSecurityExpressionHandler(securityChecker);
     }
 }

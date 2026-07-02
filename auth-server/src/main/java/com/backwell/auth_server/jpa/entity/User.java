@@ -1,6 +1,7 @@
 package com.backwell.auth_server.jpa.entity;
 
 import com.backwell.enums.AuthProvider;
+import com.backwell.enums.PermissionName;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,8 +32,10 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'LOCAL'")
     private AuthProvider authProvider;
 
+    @Deprecated
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_role",
@@ -41,6 +44,10 @@ public class User {
     )
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     private boolean expired = false;
     private boolean locked = false;
@@ -61,5 +68,13 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = Instant.now();
+    }
+
+
+    public List<PermissionName> getPermissionName() {
+        return getRole().getPermissions()
+                .stream()
+                .map(Permission::getPermissionName)
+                .toList();
     }
 }

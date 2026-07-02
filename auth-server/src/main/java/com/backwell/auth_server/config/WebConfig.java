@@ -1,6 +1,7 @@
 package com.backwell.auth_server.config;
 
 import com.backwell.auth_server.resolver.UserDTOArgumentResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -8,10 +9,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
+    private final UserDTOArgumentResolver userDTOArgumentResolver;
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-        resolvers.add(new UserDTOArgumentResolver());
+        resolvers.add(userDTOArgumentResolver);
     }
 }

@@ -1,67 +1,122 @@
 package com.backwell.auth_server.controller;
 
-import com.backwell.auth_server.dto.request.GrantRoleRequest;
+import com.backwell.auth_server.dto.internal.RoleSearchFilters;
+import com.backwell.auth_server.dto.request.CreateRoleRequest;
+import com.backwell.auth_server.dto.request.UpdateRoleRequest;
 import com.backwell.auth_server.dto.response.MessageResponse;
-import com.backwell.auth_server.jpa.service.JpaUserService;
+import com.backwell.auth_server.dto.response.RoleDTO;
+import com.backwell.auth_server.jpa.service.JpaRoleService;
+import com.backwell.auth_server.jpa.service.RoleSearchService;
 import com.backwell.auth_server.resolver.CurrentUser;
 import com.backwell.auth_server.security.user.UserDTO;
-import com.backwell.enums.RoleName;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
+@Validated
 @RestController
 @RequestMapping("/api/v1/roles")
 @RequiredArgsConstructor
 public class RolesController {
-    private final JpaUserService jpaUserService;
+    private final JpaRoleService jpaRoleService;
+    private final RoleSearchService roleSearchService;
 
-    @PostMapping("/grant")
-    public ResponseEntity<MessageResponse> grantRole (
-            @RequestBody GrantRoleRequest request,
-            @CurrentUser UserDTO userDTO
+    @GetMapping("/")
+    @PreAuthorize("hasPermission('roles:read')")
+    public ResponseEntity<PageImpl<RoleDTO>> getRoles(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Set<UUID> permissions,
+            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(defaultValue = "1") Integer pag,
+            @RequestParam(defaultValue = "20") Integer size
     ) {
-
-        RoleName requestedRole = RoleName.fromString(request.roleName());
-
-        Set<RoleName> roles = userDTO.roles()
-                .stream()
-                .map(RoleName::fromString)
-                .collect(Collectors.toSet());
-
-        RoleName highestRole = RoleName.getHighestRole(roles);
-
-        if (!highestRole.canCreate(requestedRole)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .build();
-        }
-        var response =  jpaUserService.grantRole(request.email(), requestedRole);
+        var response = roleSearchService.findRoles(new RoleSearchFilters(
+                name,
+                permissions,
+                order,
+                sortBy,
+                pag,
+                size
+        ));
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/revoke")
-    public ResponseEntity<MessageResponse> revokeRole(
-            @RequestBody GrantRoleRequest request,
-            @CurrentUser UserDTO userDTO
+    @PostMapping("/")
+    @PreAuthorize("hasPermission('roles:create')")
+    public ResponseEntity<RoleDTO> createRole(
+            @CurrentUser UserDTO userDTO,
+            @RequestBody CreateRoleRequest createRoleRequest
     ) {
-        RoleName requestedRole = RoleName.fromString(request.roleName());
+        var response = jpaRoleService.createRole(
+                userDTO.roleId(),
+                userDTO.permissionNames(),
+                createRoleRequest
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
-        Set<RoleName> roles = userDTO.roles()
-                .stream()
-                .map(RoleName::fromString)
-                .collect(Collectors.toSet());
+    @PostMapping("/update")
+    @PreAuthorize("hasPermission('roles:update')")
+    public ResponseEntity<RoleDTO> updateRole(
+            @CurrentUser UserDTO userDTO,
+            @RequestParam @NotNull UUID targetRoleId,
+            @RequestBody @Valid UpdateRoleRequest req
+    ) {
+        var response = jpaRoleService.updateRole(
+                userDTO.roleId(),
+                userDTO.permissionNames(),
+                targetRoleId,
+                req
+        );
 
-        RoleName highestRole = RoleName.getHighestRole(roles);
-
-        var response = jpaUserService.revokeRole(request.email(), requestedRole, highestRole);
         return ResponseEntity.ok(response);
+    }
+
+
+
+    /* Mismo endpoint tanto para asignación como para revocación, ya que una revocación es un
+    * caso particular de una asignación de rol con menos permisos*/
+    @PostMapping("/update-user-role")
+    @PreAuthorize("hasAllPermissions({'roles:assign','roles:revoke'})")
+    public ResponseEntity<MessageResponse> updateUserRole (
+            @CurrentUser UserDTO userDTO,
+            @RequestParam @NotNull UUID targetUserId,
+            @RequestParam @NotNull UUID targetRoleId
+    ) {
+        var response = jpaRoleService.updateUserRole(
+                userDTO.roleId(),
+                userDTO.permissionNames(),
+                targetUserId,
+                targetRoleId
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/revoke-user")
+    @PreAuthorize("hasPermission('roles:revoke')")
+    public ResponseEntity<MessageResponse> revokeUser(
+            @CurrentUser UserDTO userDTO,
+            @RequestParam @NotNull UUID targetUserId
+    ) {
+        var response = jpaRoleService.revokeUser(
+                userDTO.roleId(),
+                userDTO.permissionNames(),
+                targetUserId
+        );
+
+        return ResponseEntity.ok(response);
+
     }
 
 }

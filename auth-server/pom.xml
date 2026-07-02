@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.13</version>
+		<version>3.5.16</version> <!--Last updated on June 29, 2026-->
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.backwell</groupId>
@@ -44,7 +44,14 @@
 		<dependency>
 			<groupId>com.github.J-Sinclaire</groupId>
 			<artifactId>backwel-libraries</artifactId>
-			<version>-ce0ff5defa-1</version>
+			<version>d29c374006</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>33.6.0-jre</version>
+			<scope>compile</scope>
 		</dependency>
 
 
@@ -168,12 +175,11 @@
 						<path>
 							<groupId>org.hibernate.orm</groupId>
 							<artifactId>hibernate-jpamodelgen</artifactId>
-							<version>${hibernate.version}</version>
 						</path>
-
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

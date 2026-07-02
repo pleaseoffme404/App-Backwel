@@ -1,27 +1,35 @@
 package com.backwell.auth_server.security.user;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class AppOidcUser implements OidcUser, IdentityContainer {
     private OidcUser oidcUser;
     private UserDTO userDto;
     private boolean isNew;
 
+    public AppOidcUser(OidcUser oidcUser, UserDTO userDto,  boolean isNew) {
+        if (userDto == null) {
+            throw new IllegalArgumentException("UserDto cannot be null");
+        }
+
+        this.oidcUser = oidcUser;
+        this.userDto = userDto;
+        this.isNew = isNew;
+    }
+
     @Override
+    @NonNull
     public UserDTO getUserDTO() {
         return userDto;
     }
@@ -33,11 +41,8 @@ public class AppOidcUser implements OidcUser, IdentityContainer {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return userDto.roles().stream()
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toSet());
+        return this.fetchAuthorities();
     }
-
 
     @Override
     public String getName() {

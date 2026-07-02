@@ -38,8 +38,10 @@ public class TokenClaimsEnhancer implements OAuth2TokenCustomizer<JwtEncodingCon
                     claims.claim(USER_UUID.key(), user.uuid().toString());
                     claims.claim(EMAIL.key(), user.email());
 
-                    log.info("[Token claims] Firmando token con roles: {}", user.roles());
-                    claims.claim(ROLES.key(), user.roles());
+
+                    log.info("[TOKEN CLAIMS] Signing token with Role: {} and permissions HEX: {}.", user.role(), user.permissionsHex());
+                    claims.claim(ROLE.key(), user.role());
+                    claims.claim(PERMISSIONS.key(), user.permissionsHex());
 
                     claims.claim(AUTH_PROVIDER.key(), user.authProvider());
                 } else {
